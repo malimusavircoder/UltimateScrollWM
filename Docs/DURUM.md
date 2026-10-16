@@ -44,6 +44,9 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
    yapılandırmasına yazılıyor; paneru canlı yeniden yüklediği için değişiklikler
    anında uygulanıyor. Dosyanın geri kalanı (kısayollar, pencere kuralları, yorumlar)
    korunuyor. `PaneruConfig` gerçek `default-config.toml` üzerinde 17 testle doğrulandı.
+6. **Zarif kapatma + akıllı açılış**: kapatırken paneru'ya `quit` komutu gönderiliyor
+   (gerekirse SIGTERM/SIGINT ile zorlanıyor); ayarlar penceresi artık her açılışta
+   değil, yalnızca ilk açılışta, `--settings` bayrağıyla veya izin eksikken açılıyor.
 
 ## Tespit edilen sorunlar
 
@@ -53,14 +56,14 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 | --- | --- | --- |
 | ✅ | ~~`@AppStorage` anahtarları işlevsizdi~~ → `SettingsStore` ile `config.toml`'a bağlandı | çözüldü |
 | ✅ | ~~Gap kaydırıcısı etkisizdi~~ → `[padding]` değerlerine yazıyor | çözüldü |
-| 3 | `stop()` sürece **SIGINT** gönderiyor; zarif çıkış `send-cmd quit` ile olur. SIGINT'te pencereler ekran dışında (parked) kalabilir | `PaneruService.swift:56` |
+| ✅ | ~~`stop()` SIGINT gönderiyordu~~ → önce `send-cmd quit`, gerekirse SIGTERM/SIGINT | çözüldü |
 | 4 | Motor her **0.8 sn**'de tüm pencereleri AX ile tarıyor, sadece değiştirici paneli için → gereksiz maliyet | `StripEngine.swift:38` |
 
 ### Orta öncelik
 
 | # | Sorun | Yer |
 | --- | --- | --- |
-| 5 | Her açılışta ayarlar penceresi otomatik açılıyor | `App.swift` |
+| ✅ | ~~Her açılışta ayarlar penceresi otomatik açılıyordu~~ → yalnızca ilk açılış / `--settings` / izin eksikse | çözüldü |
 | 6 | `⌥Tab` global olarak çalınıyor → diğer uygulamalarda `⌥Tab` işlevi eziliyor | `HotKeyManager.swift` |
 | 7 | Değiştirici, son tuştan **0.9 sn** sonra sabit gecikmeyle onaylıyor; "⌥ bırakınca seç" yok | `WindowSwitcherController.swift:69` |
 | 8 | `focusedWindow()` `unsafeBitCast` kullanıyor (kırılgan) | `AccessibilityManager.swift:106` |
@@ -79,9 +82,9 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 
 1. ✅ **Ayarlar → `config.toml` köprüsü.** Tamamlandı (bkz. yukarı). Genişletilebilir:
    kısayol düzenleyici, pencere kuralları (per-app), ileri düzey paneru seçenekleri.
-2. **Zarif kapatma.** Çıkışta `send-cmd quit` gönder; pencereleri ekranda bırakma.
-3. **Açılış davranışı.** Ayarlar penceresini yalnızca ilk açılışta (veya `--settings`
-   bayrağıyla) göster.
+2. ✅ **Zarif kapatma.** Çıkışta `send-cmd quit` gönderiliyor.
+3. ✅ **Açılış davranışı.** Ayarlar penceresi yalnızca ilk açılışta (veya `--settings`
+   bayrağıyla) gösteriliyor.
 4. **Pencere değiştirici.** `⌥` bırakılınca seçimi onayla; istenirse gerçek pencere
    önizlemeleri (CGWindowList) ekle.
 5. **Olay tabanlı tazeleme.** 0.8 sn polling yerine `AXObserver` + panel açılışında tazeleme.

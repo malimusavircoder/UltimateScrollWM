@@ -53,15 +53,36 @@ final class PaneruService: ObservableObject {
         }
     }
 
+    /// Motoru zarifçe kapatır.
+    ///
+    /// Önce paneru'nun `quit` komutunu gönderir; böylece paneru kendi temizlik
+    /// işini yapıp pencereleri ekranda bırakır (SIGINT ile aniden öldürmek
+    /// pencereleri ekran dışında bırakabiliyordu). Kısa süre içinde kapanmazsa
+    /// sırasıyla SIGTERM ve SIGINT ile zorlanır.
+    ///
+    /// Uygulama kapanırken çağrıldığı için kısa bir senkron bekleme kabul edilebilir.
     func stop() {
-        process?.interrupt()
-        process = nil
+        guard let process, process.isRunning else {
+            self.process = nil
+            isRunning = false
+            return
+        }
+
+        send(["quit"])
+
+        let deadline = Date().addingTimeInterval(1.5)
+        while process.isRunning && Date() < deadline {
+            usleep(50_000) // 50 ms
+        }
+        if process.isRunning { process.terminate() }
+
+        self.process = nil
         isRunning = false
     }
 
     func restart() {
         stop()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in self?.start() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.start() }
     }
 
     func send(_ arguments: [String]) {

@@ -33,8 +33,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         HotKeyManager.shared.onSwitcherNext = { [weak switcher] in switcher?.showNext() }
         HotKeyManager.shared.onSwitcherPrevious = { [weak switcher] in switcher?.showPrevious() }
         HotKeyManager.shared.start()
-        showSettings()
+
+        // Ayarlar penceresini yalnızca gerçekten gerektiğinde aç:
+        // ilk açılışta, `--settings` ile istendiğinde veya erişilebilirlik izni
+        // eksikse. Aksi hâlde menü çubuğunda sessizce başla.
+        let firstRun = !UserDefaults.standard.bool(forKey: Self.firstRunKey)
+        if firstRun { UserDefaults.standard.set(true, forKey: Self.firstRunKey) }
+        let requested = CommandLine.arguments.contains("--settings")
+        if firstRun || requested || !engine.hasPermission {
+            showSettings()
+        }
     }
+
+    private static let firstRunKey = "UltimateScrollWM.hasLaunchedBefore"
 
     func showSettings() {
         if settingsWindow == nil {
