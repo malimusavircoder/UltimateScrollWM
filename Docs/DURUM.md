@@ -94,17 +94,14 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 
 ## İmzalama ve Erişilebilirlik izni
 
-Uygulama şu anda makinede bulunan **Developer ID** kimliğiyle imzalanmıştır:
-
-```bash
-CODE_SIGN_IDENTITY="Developer ID Application: Murat TUFAN (Z54BS9LRA2)" make install
-```
+`make install` uygulamayı makinede bulunan **Developer ID** kimliğiyle imzalar
+(`Makefile` içindeki `SIGN_IDENTITY`). Ad-hoc'a dönmek için `make install SIGN_IDENTITY=-`.
 
 Bu önemli, çünkü ad-hoc imzada (`codesign --sign -`) macOS Erişilebilirlik iznini
 ikili dosyanın parmak izine (CDHash) bağlar; kod her derlendiğinde parmak izi
 değişir ve izni elle yeniden vermek gerekir. Sabit bir kimlikte macOS izni
 sertifikaya bağlar ve izin yeniden derlemelerde korunur.
-(`Scripts/build-app.sh` `CODE_SIGN_IDENTITY` değişkenini okur; verilmezse ad-hoc'a düşer.)
+(`Scripts/build-app.sh` `CODE_SIGN_IDENTITY` değişkenini okur.)
 
 ### İzin verirken dikkat
 
