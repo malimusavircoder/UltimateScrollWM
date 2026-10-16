@@ -1,56 +1,102 @@
-# UltimateScrollWM – MVP v0.1
+# UltimateScrollWM
 
-macOS Scrolling Window Manager  
-(TileMyMac + ChainYourMac birleşimi – ilk çalışır sürüm)
+macOS için **kaydırmalı (scrolling) pencere yöneticisi** — menü çubuğunda yaşayan bir
+SwiftUI arayüzü, altında [Paneru](https://github.com/karinushka/paneru) motoru (MIT).
+
+Pencereler yan yana bir şeritte durur. Yeni bir pencere açıldığında diğerleri
+**küçülmez**; sıradaki boşluğa girer ve şerit, odaktaki pencereyi göstermek için kayar.
 
 ## Hızlı Başlangıç
 
-**→ `XCODE_KURULUM.md` dosyasını aç ve adım adım takip et.**
+```bash
+make install
+```
 
-Orada Xcode projesi oluşturma, Sandbox kapatma, dosya ekleme ve test etme adımları var.
+Bu komut release derlemesini yapar, `.app` paketini üretir, geçici dizinde
+imzalar ve `/Applications/UltimateScrollWM.app` içine kurar.
 
-## MVP Özellikleri
+İlk açılışta macOS **Erişilebilirlik (Accessibility)** izni ister:
 
-- Menü bar uygulaması
-- Accessibility izni isteme
-- Pencereleri otomatik keşfetme
-- Yatay şeritte dizme
-- `⌃⌥ ←` / `⌃⌥ →` ile gezinme
-- Yeni pencereyi otomatik ekleme
-- Pause / Resume
-- Gap + varsayılan genişlik ayarı
+```
+Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik
+```
+
+> İzni verdikten sonra uygulamayı bir kez yeniden başlat.
+
+Diğer komutlar:
+
+```bash
+make app      # sadece dist/UltimateScrollWM.app üretir (kurulum yapmaz)
+make run      # kaynaktan doğrudan çalıştırır (geliştirme)
+make clean    # derleme çıktılarını temizler
+```
+
+## Özellikler
+
+- Menü çubuğu uygulaması (Dock'ta görünmez)
+- Gömülü Paneru 0.5.2 motoru ile otomatik pencereleri yönetme
+- Ayarlar penceresi: Genel Bakış / Pencere Düzeni / Kısayollar / Gelişmiş
+- `⌥Tab` / `⌥⇧Tab` ile Alt-Tab benzeri pencere değiştirici
+- Erişilebilirlik izni yönlendirmesi
+- Mac açılışında başlatma (login item)
+- Motoru yeniden başlatma, yapılandırma dosyasını açma
+
+## Varsayılan Kısayollar
+
+Bunlar Paneru motoru tarafından doğrudan yakalanır:
+
+| Kısayol | İşlev |
+| --- | --- |
+| `⌃⌥ ← / →` | Pencereler arasında geç |
+| `⌃⌥⇧ ← / →` | Aktif pencereyi sola / sağa taşı |
+| `⌃⌥ R` | Genişliği değiştir |
+| `⌃⌥ F` | Tam genişlik |
+| `⌃⌥ C` | Ortala |
+| `⌃⌥ ] / ⇧]` | Stack'e al / çıkar |
+| `⌃⌥ N` | Sonraki ekrana gönder |
+| `⌥ Tab` | Pencere değiştirici (bu uygulama) |
+
+## Mimari
+
+Uygulama bir **Paneru sarmalayıcısıdır** (TileMyMac'in yaptığı gibi): asıl pencere
+yönetimini gömülü `paneru` binary'si yapar, bu uygulama ona arayüz ve kolaylık sağlar.
+
+```
+UltimateScrollWMApp (SwiftUI)
+├── MenuBarView / SettingsView / WindowSwitcherView   → arayüz
+├── PaneruService        → gömülü paneru'yu başlatır, send-cmd ile komut gönderir
+├── HotKeyManager        → ⌥Tab kısayolları (pencere değiştirici)
+├── WindowSwitcherController → ⌥Tab panelini yönetir
+├── AccessibilityManager → pencere keşfi / AX izni
+└── StripEngine          → native Swift motor (şu an PASİF, managesLayout = false)
+```
+
+Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config.toml`
+
+## Durum ve Yol Haritası
+
+Ayrıntılı inceleme ve önceliklendirilmiş yol haritası: **[`Docs/DURUM.md`](Docs/DURUM.md)**.
 
 ## Proje Yapısı
 
 ```
 UltimateScrollWM/
-├── XCODE_KURULUM.md          ← Buradan başla
-├── README.md
+├── Makefile
 ├── Package.swift
+├── AppBundle/Info.plist            → .app paketleme şablonu
+├── Scripts/build-app.sh            → .app üretici/kurucu
+├── Docs/DURUM.md                   → durum + yol haritası
 └── Sources/UltimateScrollWM/
-    ├── App/
-    │   └── UltimateScrollWMApp.swift
-    ├── Engine/
-    │   ├── AccessibilityManager.swift
-    │   ├── StripEngine.swift
-    │   └── HotKeyManager.swift
-    ├── Models/
-    │   ├── WindowInfo.swift
-    │   └── StripState.swift
-    ├── Views/
-    │   ├── MenuBarView.swift
-    │   └── SettingsView.swift
-    └── Utilities/
-        └── Extensions.swift
+    ├── App/UltimateScrollWMApp.swift
+    ├── Engine/  (PaneruService, StripEngine, AccessibilityManager, HotKeyManager,
+    │             WindowSwitcherController, LoginItemManager)
+    ├── Models/  (StripState, WindowInfo)
+    ├── Views/   (MenuBarView, SettingsView, WindowSwitcherView)
+    ├── Utilities/Extensions.swift
+    └── Resources/ (paneru binary, default-config.toml, lisans)
 ```
 
-## Sonraki Sürümler
+## Notlar
 
-- v0.2 → Trackpad swipe + spring animasyon
-- v0.3 → Stack + Tabbed columns
-- v0.4 → Multi-monitor + layout restore
-- v0.5 → Per-app rules + minimap
-
-## Not
-
-Bu kod Linux sandbox’ında yazıldı. Derleme ve test senin Mac’inde Xcode ile yapılacak.
+- Gömülü `paneru` binary'si MIT lisanslıdır (bkz. `Sources/UltimateScrollWM/Resources/PANERU_LICENSE.txt`).
+- `XCODE_KURULUM.md` eski, elle Xcode kurulumunu anlatır; artık gerekmiyor (SwiftPM kullanılıyor).
