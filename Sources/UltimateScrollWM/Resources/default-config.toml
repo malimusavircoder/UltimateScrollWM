@@ -1,0 +1,82 @@
+[options]
+focus_follows_mouse = false
+mouse_follows_focus = false
+preset_column_widths = [0.25, 0.33333, 0.5, 0.66667, 0.75, 1.0]
+preset_stack_heights = [0.25, 0.33333, 0.5, 0.66667, 0.75]
+animation_speed = 14.0
+auto_center = false
+sliver_width = 6
+sliver_height = 0.18
+window_resize_cycle = true
+reap_empty_workspaces = true
+create_virtual_workspace_automatically = true
+
+[padding]
+top = 6
+bottom = 6
+left = 6
+right = 6
+
+[swipe]
+sensitivity = 0.42
+deceleration = 4.0
+continuous = true
+
+[swipe.gesture]
+fingers_count = 4
+direction = "Natural"
+vertical = true
+
+[swipe.scroll]
+modifier = "alt"
+window_step = false
+vertical_modifier = "shift"
+
+[decorations.active.border]
+enabled = true
+color = "#5E9CFF"
+opacity = 0.9
+width = 3.0
+radius = "auto"
+
+[decorations.inactive.dim]
+opacity = -0.08
+opacity_night = -0.15
+
+[restore]
+enabled = true
+startup_grace_ms = 12000
+missing_windows = "ignore"
+
+[bindings]
+window_focus_west = "ctrl + alt - leftarrow"
+window_focus_east = "ctrl + alt - rightarrow"
+window_focus_north = "ctrl + alt - uparrow"
+window_focus_south = "ctrl + alt - downarrow"
+window_swap_west = "ctrl + alt + shift - leftarrow"
+window_swap_east = "ctrl + alt + shift - rightarrow"
+window_swap_north = "ctrl + alt + shift - uparrow"
+window_swap_south = "ctrl + alt + shift - downarrow"
+window_resize = "ctrl + alt - r"
+window_fullwidth = "ctrl + alt - f"
+window_center = "ctrl + alt - c"
+window_manage = "ctrl + alt - t"
+window_stack = "ctrl + alt - ]"
+window_unstack = "ctrl + alt + shift - ]"
+window_tabbeddisplay = "ctrl + alt + shift - t"
+window_equalize = "ctrl + alt - 0"
+window_nextdisplay = "ctrl + alt - n"
+window_virtual_north = "ctrl + alt - pageup"
+window_virtual_south = "ctrl + alt - pagedown"
+window_virtualmove_north = "ctrl + alt + shift - pageup"
+window_virtualmove_south = "ctrl + alt + shift - pagedown"
+
+[windows.dialogs]
+title = ".*"
+subrole = "AXDialog"
+floating = true
+
+[windows.floating]
+title = ".*"
+subrole = "AXFloatingWindow"
+floating = true

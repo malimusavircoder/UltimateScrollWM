@@ -1,0 +1,16 @@
+# Build artifacts
+.build/
+.swiftpm/
+Package.resolved
+
+# Xcode
+*.xcodeproj
+*.xcworkspace
+xcuserdata/
+DerivedData/
+
+# macOS
+.DS_Store
+
+# Bundled release output
+dist/
