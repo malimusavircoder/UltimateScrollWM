@@ -51,6 +51,16 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
    gece değeri (`opacity_night`) dokunulmadığı için gece modunda karartma geri
    geliyordu. Artık ikisi birlikte yazılıyor. Ayrıca `SettingsStore.batch()` ile
    boşluk kaydırıcısı 4 ayrı dosya yazımı yerine tek yazım yapıyor.
+8. **Tanılama + izin bekçisi**: `Engine/Diagnostics.swift` uygulamanın
+   Erişilebilirlik durumunu `~/Library/Application Support/UltimateScrollWM/durum.txt`
+   dosyasına yazar; motorun çıktısı `paneru.log`'a gider. İzin eksikse uygulama 3
+   saniyede bir yoklar ve izin gelir gelmez motoru kendisi canlandırır — böylece
+   Sistem Ayarları'ndan sonra yeniden başlatmak gerekmez.
+9. **Varsayılan config'deki kısayol hatası**: `window_stack` / `window_unstack`
+   için `]` yazıyordu; paneru'nun tuş adları arasında `]` yok, bu yüzden
+   `invalid key ']'` hatası verip **iki kısayolu sessizce devre dışı bırakıyordu**.
+   Doğru ad `rightbracket` (paneru `src/config.rs` sanal tuş haritasından
+   doğrulandı). Şablon ve canlı yapılandırma düzeltildi.
 
 ## Tespit edilen sorunlar
 
@@ -84,19 +94,28 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 
 ## İmzalama ve Erişilebilirlik izni
 
-`make install` uygulamayı **ad-hoc** (`codesign --sign -`) imzalar. Bu durumda macOS,
-Erişilebilirlik iznini ikili dosyanın parmak izine (CDHash) bağlar; kod her
-derlendiğinde parmak izi değişir ve izni yeniden vermek gerekir.
-
-Kalıcı çözüm, sabit bir kimlikle imzalamaktır — bu makinede mevcut olan Developer ID
-ile tek satır yeterlidir:
+Uygulama şu anda makinede bulunan **Developer ID** kimliğiyle imzalanmıştır:
 
 ```bash
-CODE_SIGN_IDENTITY="Developer ID Application: Ad Soyad (TEAMID)" make install
+CODE_SIGN_IDENTITY="Developer ID Application: Murat TUFAN (Z54BS9LRA2)" make install
 ```
 
-Böylece macOS izni sertifikaya bağlar ve yeniden derlemeler izni bozmaz.
-(`Scripts/build-app.sh` bu değişkeni okur; değer verilmezse ad-hoc'a düşer.)
+Bu önemli, çünkü ad-hoc imzada (`codesign --sign -`) macOS Erişilebilirlik iznini
+ikili dosyanın parmak izine (CDHash) bağlar; kod her derlendiğinde parmak izi
+değişir ve izni elle yeniden vermek gerekir. Sabit bir kimlikte macOS izni
+sertifikaya bağlar ve izin yeniden derlemelerde korunur.
+(`Scripts/build-app.sh` `CODE_SIGN_IDENTITY` değişkenini okur; verilmezse ad-hoc'a düşer.)
+
+### İzin verirken dikkat
+
+- **macOS 27**, "Erişilebilirlik" bölümünü **"Aygıt Denetimi ve Veri Erişimi"**
+  olarak yeniden adlandırdı. Aynı izin, aynı anahtar — sadece adı değişti.
+  paneru da hatasında bu yeni adı kullanır.
+- İmza kimliği değiştiğinde (ör. ad-hoc → Developer ID) izin bir kez daha
+  istenir; macOS `AXIsProcessTrusted` yanıtını **süreç başına önbelleğe** aldığı
+  için bayat kaydı **`−` ile silip uygulamanın kendi isteğiyle** yeniden
+  eklemek gerekebilir. Anahtarı kapat-aç tek başına yetmeyebilir.
+- Sorun çıkarsa tek bakılacak yer: `durum.txt` ve `paneru.log`.
 
 ## Önerilen yol haritası
 

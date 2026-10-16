@@ -10,6 +10,7 @@ final class PaneruService: ObservableObject {
     @Published private(set) var lastError: String?
 
     private var process: Process?
+    private var logHandle: FileHandle?
 
     private init() {}
 
@@ -23,6 +24,8 @@ final class PaneruService: ObservableObject {
         do {
             let binary = try bundledResource(named: "paneru", extension: nil)
             let config = try ensureConfiguration()
+            let log = try openLogFile()
+            let logURL = log.0
             let task = Process()
             task.executableURL = binary
             task.arguments = ["launch"]
@@ -31,15 +34,17 @@ final class PaneruService: ObservableObject {
             environment["PANERU_MACH_SERVICE"] = Self.machServiceName
             task.environment = environment
             task.standardOutput = FileHandle.nullDevice
-            let errorPipe = Pipe()
-            task.standardError = errorPipe
+            // Motorun çıktısını dosyaya yaz: erişilebilirlik gibi sorunları
+            // teşhis edebilmek için (önce yalnızca kapanışta okunuyordu).
+            task.standardError = log.1
+            logHandle = log.1
             task.terminationHandler = { [weak self] finished in
-                let data = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let message = String(data: data, encoding: .utf8)
+                let tail = (try? String(contentsOf: logURL, encoding: .utf8)).map { String($0.suffix(4000)) }
                 Task { @MainActor in
+                    self?.logHandle = nil
                     self?.isRunning = false
-                    if finished.terminationStatus != 0, let message, !message.isEmpty {
-                        self?.lastError = message
+                    if finished.terminationStatus != 0, let tail, !tail.isEmpty {
+                        self?.lastError = tail
                     }
                 }
             }
@@ -51,6 +56,27 @@ final class PaneruService: ObservableObject {
             lastError = error.localizedDescription
             isRunning = false
         }
+    }
+
+    /// Motorun çalışma zamanı günlüğünün yolu (`paneru.log`).
+    var logURL: URL? {
+        try? applicationSupportDirectory().appendingPathComponent("paneru.log")
+    }
+
+    /// Motorun PID'i (çalışmıyorsa `nil`).
+    var pid: Int32? { process?.processIdentifier }
+
+    private func openLogFile() throws -> (URL, FileHandle) {
+        let directory = try applicationSupportDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("paneru.log")
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(atPath: url.path, contents: nil)
+        }
+        let handle = try FileHandle(forWritingTo: url)
+        handle.seekToEndOfFile()
+        handle.write(Data("\n===== motor başlatıldı: \(Date()) =====\n".utf8))
+        return (url, handle)
     }
 
     /// Motoru zarifçe kapatır.
@@ -76,6 +102,8 @@ final class PaneruService: ObservableObject {
         }
         if process.isRunning { process.terminate() }
 
+        try? logHandle?.close()
+        logHandle = nil
         self.process = nil
         isRunning = false
     }

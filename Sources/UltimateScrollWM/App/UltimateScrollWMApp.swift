@@ -43,9 +43,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if firstRun || requested || !engine.hasPermission {
             showSettings()
         }
+
+        Diagnostics.write()
+
+        // İzin sonradan verilirse (Sistem Ayarları'nda) uygulamayı yeniden
+        // başlatmak gerekmesin: izni izle, gelince motoru canlandır.
+        if !engine.hasPermission { watchPermission() }
     }
 
     private static let firstRunKey = "UltimateScrollWM.hasLaunchedBefore"
+    private var permissionTimer: Timer?
+
+    /// Eksik Erişilebilirlik iznini birkaç saniyede bir yoklar.
+    ///
+    /// macOS izni çalışan sürece hemen yansıtmaz ve `AXIsProcessTrusted` süreç
+    /// başına önbelleğe alır; bu yüzden izin gelince motor yeniden başlatılır.
+    private func watchPermission() {
+        permissionTimer?.invalidate()
+        permissionTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { _ in
+            Task { @MainActor in
+                let engine = StripEngine.shared
+                engine.checkPermission()
+                Diagnostics.write()
+                if engine.hasPermission {
+                    self.permissionTimer?.invalidate()
+                    self.permissionTimer = nil
+                    engine.start()
+                    // Motor da izne ihtiyaç duyar; süreç başına önbelleği tazele.
+                    PaneruService.shared.restart()
+                }
+            }
+        }
+    }
 
     func showSettings() {
         if settingsWindow == nil {
@@ -63,6 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationWillTerminate(_ notification: Notification) {
+        permissionTimer?.invalidate()
         PaneruService.shared.stop()
         HotKeyManager.shared.stop()
     }
