@@ -152,19 +152,46 @@ private struct LayoutSettings: View {
             get: { Double(settings.int("padding.left", default: 6)) },
             set: { newValue in
                 let value = Int(newValue)
-                settings.setInt("padding.top", value)
-                settings.setInt("padding.bottom", value)
-                settings.setInt("padding.left", value)
-                settings.setInt("padding.right", value)
+                settings.batch {
+                    settings.setInt("padding.top", value)
+                    settings.setInt("padding.bottom", value)
+                    settings.setInt("padding.left", value)
+                    settings.setInt("padding.right", value)
+                }
             }
         )
     }
 
-    /// Paneru'nun yerel karartma modu: yalnızca `opacity` negatifken etkin.
+    // Kapatmadan önce kullanılan karartma miktarını hatırlamak için.
+    private static let dimDayKey = "UltimateScrollWM.dimDay"
+    private static let dimNightKey = "UltimateScrollWM.dimNight"
+
+    /// Paneru'nun yerel karartma modu. Gündüz (`opacity`) ve gece
+    /// (`opacity_night`) değerleri birlikte yönetilmeli; yoksa gece moduna
+    /// geçildiğinde kapattığın karartma geri gelir.
     private var dimmed: Binding<Bool> {
         Binding(
             get: { settings.double("decorations.inactive.dim.opacity", default: 0) < 0 },
-            set: { settings.setDouble("decorations.inactive.dim.opacity", $0 ? -0.08 : 0) }
+            set: { on in
+                let defaults = UserDefaults.standard
+                if on {
+                    let day = (defaults.object(forKey: Self.dimDayKey) as? Double) ?? -0.08
+                    let night = (defaults.object(forKey: Self.dimNightKey) as? Double) ?? -0.15
+                    settings.batch {
+                        settings.setDouble("decorations.inactive.dim.opacity", day < 0 ? day : -0.08)
+                        settings.setDouble("decorations.inactive.dim.opacity_night", night < 0 ? night : -0.15)
+                    }
+                } else {
+                    let day = settings.double("decorations.inactive.dim.opacity", default: 0)
+                    let night = settings.double("decorations.inactive.dim.opacity_night", default: 0)
+                    if day != 0 { defaults.set(day, forKey: Self.dimDayKey) }
+                    if night != 0 { defaults.set(night, forKey: Self.dimNightKey) }
+                    settings.batch {
+                        settings.setDouble("decorations.inactive.dim.opacity", 0)
+                        settings.setDouble("decorations.inactive.dim.opacity_night", 0)
+                    }
+                }
+            }
         )
     }
 

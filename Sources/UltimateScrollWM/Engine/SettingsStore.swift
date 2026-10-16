@@ -17,6 +17,7 @@ final class SettingsStore: ObservableObject {
 
     private(set) var url: URL?
     private var config: PaneruConfig?
+    private var isBatching = false
 
     init() {
         reload()
@@ -75,6 +76,17 @@ final class SettingsStore: ObservableObject {
     private func write(_ path: String, _ value: String) {
         guard let (section, key) = Self.split(path) else { return }
         config?.set(section: section, key: key, value: value)
+        if !isBatching { save() }
+    }
+
+    /// Birden çok anahtarı **tek** dosya yazımıyla günceller.
+    ///
+    /// Kaydırıcı gibi art arda yazan kontroller için gereklidir; aksi hâlde her
+    /// anahtar için dosya yeniden yazılır ve paneru gereksiz yere yeniden yükler.
+    func batch(_ body: () -> Void) {
+        isBatching = true
+        body()
+        isBatching = false
         save()
     }
 
