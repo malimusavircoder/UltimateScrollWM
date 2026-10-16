@@ -59,6 +59,15 @@ final class AccessibilityManager {
                 ) else { continue }
 
                 info.isMinimized = minimized
+
+                // Finder'ın masaüstü "penceresi" gerçek bir pencere değildir.
+                if isFinderDesktop(
+                    pid: app.processIdentifier,
+                    title: info.title,
+                    frame: info.frame,
+                    isMinimized: minimized
+                ) { continue }
+
                 result.append(info)
             }
         }
@@ -76,6 +85,10 @@ final class AccessibilityManager {
         AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef)
         let title = titleRef as? String ?? ""
 
+        var subroleRef: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subroleRef)
+        let subrole = subroleRef as? String ?? ""
+
         let frame = getFrame(of: element) ?? .zero
 
         // Çok küçük pencereler gerçek içerik penceresi değildir.
@@ -86,8 +99,36 @@ final class AccessibilityManager {
             pid: pid,
             appName: appName,
             title: title,
-            frame: frame
+            frame: frame,
+            subrole: subrole
         )
+    }
+
+    // MARK: - Masaüstü filtresi
+
+    /// Finder'ın "masaüstü" penceresini ayırt eder.
+    ///
+    /// macOS masaüstünü Finder'a ait, başlıksız ve ekran boyutunda bir pencere
+    /// olarak bildirir; `⌥Tab` listesinde görünmesi anlamsızdır (seçilince
+    /// sadece Finder öne gelir, hiçbir pencere açılmaz).
+    ///
+    /// Koşulların hepsi birden aranır, böylece gerçek bir Finder penceresi
+    /// yanlışlıkla elenmez: başlığı olan, ekrandan küçük ya da küçültülmüş
+    /// pencereler korunur.
+    ///
+    /// Boyut, **her ekranla tek tek** karşılaştırılır: ekranların birleşik
+    /// alanıyla karşılaştırılsaydı, çok ekranlı kurulumda hiçbir masaüstü
+    /// birleşik alanı kaplamadığı için filtre çalışmazdı.
+    private func isFinderDesktop(pid: pid_t, title: String, frame: CGRect, isMinimized: Bool) -> Bool {
+        guard !isMinimized else { return false }
+        guard NSRunningApplication(processIdentifier: pid)?.bundleIdentifier == "com.apple.finder" else {
+            return false
+        }
+        guard title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+
+        return NSScreen.screens.contains { screen in
+            frame.width >= screen.frame.width - 1 && frame.height >= screen.frame.height - 1
+        }
     }
     
     // MARK: - Window Attributes

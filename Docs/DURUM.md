@@ -83,6 +83,15 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
     listelenir (⊖ işaretiyle) — seçilince `raiseWindow` önce uygulamayı öne
     getirip sonra minimize'i kaldırır. Seçicinin gördüğü liste, dışarıdan
     doğrulanabilsin diye `secici.txt` dosyasına yazılır.
+13. **Masaüstü filtresi**: Finder'ın masaüstü "penceresi" (başlıksız, ekran
+    boyutunda) `⌥Tab` listesinden çıkarıldı — 10 pencere 9'a indi. Filtre
+    başlık + boyut + uygulama kimliği üçlüsünü **birlikte** arar, böylece
+    gerçek Finder pencereleri yanlışlıkla elenmez. Boyut her ekranla **tek tek**
+    karşılaştırılır: ekranların birleşik alanıyla karşılaştırılsaydı çok ekranlı
+    kurulumda hiçbir masaüstü birleşik alanı kaplamadığı için filtre çalışmazdı.
+    `WindowInfo`'ya `subrole` alanı eklendi ve `secici.txt`'e "rol" sütunu olarak
+    yazılıyor (gözlem: hepsi `AXStandardWindow` — yani filtreyi role dayamak
+    ayrım sağlamazdı).
 
 ## Tespit edilen sorunlar
 

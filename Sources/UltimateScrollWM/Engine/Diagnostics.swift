@@ -51,14 +51,15 @@ enum Diagnostics {
             "zaman: \(ISO8601DateFormatter().string(from: Date()))",
             "pencereSayisi: \(windows.count)",
             "",
-            "sira\tdurum\tuygulama\tbaslik\tcerceve",
+            "sira\tdurum\tuygulama\tbaslik\trol\tcerceve",
         ]
         for (index, window) in windows.enumerated() {
             let frame = "\(Int(window.frame.origin.x)),\(Int(window.frame.origin.y)) "
                 + "\(Int(window.frame.width))x\(Int(window.frame.height))"
             let title = window.title.isEmpty ? "(basliksiz)" : window.title
             let state = window.isMinimized ? "minimize" : "acik"
-            lines.append("\(index)\t\(state)\t\(window.appName)\t\(title)\t\(frame)")
+            let subrole = window.subrole.isEmpty ? "-" : window.subrole
+            lines.append("\(index)\t\(state)\t\(window.appName)\t\(title)\t\(subrole)\t\(frame)")
         }
 
         try? lines.joined(separator: "\n")
