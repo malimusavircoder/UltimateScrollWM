@@ -15,18 +15,21 @@ make install
 Bu komut release derlemesini yapar, `.app` paketini üretir, geçici dizinde
 imzalar ve `/Applications/UltimateScrollWM.app` içine kurar.
 
-İlk açılışta macOS **Erişilebilirlik (Accessibility)** izni ister:
+İlk açılışta macOS **Aygıt Denetimi ve Veri Erişimi** izni ister (macOS 27'de
+"Erişilebilirlik" bölümünün yeni adı):
 
 ```
-Sistem Ayarları › Gizlilik ve Güvenlik › Erişilebilirlik
+Sistem Ayarları › Gizlilik ve Güvenlik › Aygıt Denetimi ve Veri Erişimi
 ```
 
-> İzni verdikten sonra uygulamayı bir kez yeniden başlat.
+> İzni verdikten birkaç saniye sonra motor **kendiliğinden** başlar; uygulamayı
+> yeniden başlatman gerekmez. Ayrıntılı kurulum: [Docs/KURULUM.md](Docs/KURULUM.md)
 
 Diğer komutlar:
 
 ```bash
 make app      # sadece dist/UltimateScrollWM.app üretir (kurulum yapmaz)
+make dmg      # dağıtılabilir DMG üretir (dist/UltimateScrollWM-<sürüm>.dmg)
 make run      # kaynaktan doğrudan çalıştırır (geliştirme)
 make clean    # derleme çıktılarını temizler
 ```
@@ -36,7 +39,8 @@ make clean    # derleme çıktılarını temizler
 - Menü çubuğu uygulaması (Dock'ta görünmez)
 - Gömülü Paneru 0.5.2 motoru ile otomatik pencereleri yönetme
 - Ayarlar penceresi: Genel Bakış / Pencere Düzeni / Kısayollar / Gelişmiş
-- `⌥Tab` / `⌥⇧Tab` ile Alt-Tab benzeri pencere değiştirici
+- `⌥Tab` / `⌥⇧Tab` ile Alt-Tab benzeri pencere değiştirici (`⌥` basılı tut,
+  `Tab` ile gez, `⌥` bırakınca seç; `Esc` iptal)
 - Erişilebilirlik izni yönlendirmesi
 - Mac açılışında başlatma (login item)
 - Motoru yeniden başlatma, yapılandırma dosyasını açma

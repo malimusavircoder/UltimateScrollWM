@@ -61,6 +61,16 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
    `invalid key ']'` hatası verip **iki kısayolu sessizce devre dışı bırakıyordu**.
    Doğru ad `rightbracket` (paneru `src/config.rs` sanal tuş haritasından
    doğrulandı). Şablon ve canlı yapılandırma düzeltildi.
+10. **Pencere değiştirici düzeltmesi**: Seçici, son tuştan 0.9 sn sonra
+    kendiliğinden onaylıyordu; bu yüzden "hemen kapanıyor" gibi görünüp
+    gezmek imkânsızdı. Artık macOS `⌘Tab` mantığı var: `⌥` basılı tutulur,
+    `Tab` ile gezilir, **`⌥` bırakılınca seçim uygulanır**; `Esc` iptal eder.
+    (`⌥` bırakılışı global `flagsChanged` izleyicisiyle yakalanır; kaçırılırsa
+    10 sn'lik emniyet zamanlayıcısı paneli kapatır.)
+11. **DMG paketleme**: `Scripts/package-dmg.sh` + `make dmg`. Uygulama ve gömülü
+    `paneru` Developer ID ile imzalanır, sürükle-bırak DMG üretilir, DMG'nin
+    kendisi de imzalanır ve doğrulanır. Kurulum kılavuzu: `Docs/KURULUM.md`.
+    Notarization yok (kişisel kullanım); paket yalnızca `arm64`.
 
 ## Tespit edilen sorunlar
 
@@ -121,8 +131,8 @@ sertifikaya bağlar ve izin yeniden derlemelerde korunur.
 2. ✅ **Zarif kapatma.** Çıkışta `send-cmd quit` gönderiliyor.
 3. ✅ **Açılış davranışı.** Ayarlar penceresi yalnızca ilk açılışta (veya `--settings`
    bayrağıyla) gösteriliyor.
-4. **Pencere değiştirici.** `⌥` bırakılınca seçimi onayla; istenirse gerçek pencere
-   önizlemeleri (CGWindowList) ekle.
+4. ✅ **Pencere değiştirici.** `⌥` bırakılınca onaylama yapıldı (bkz. 10. madde).
+   Kalan isteğe bağlı iş: gerçek pencere önizlemeleri (CGWindowList).
 5. **Olay tabanlı tazeleme.** 0.8 sn polling yerine `AXObserver` + panel açılışında tazeleme.
 6. **İlk kurulum sihirbazı.** İzin/eksik ayar kontrolü ("Mac Setup check").
 7. **Karar**: `StripEngine` bitirilecek mi (paneru'suz çalışma) yoksa kaldırılacak mı?

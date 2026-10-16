@@ -1,6 +1,6 @@
 # UltimateScrollWM – geliştirme komutları
 
-.PHONY: build app install run clean
+.PHONY: build app install dmg run clean
 
 # Kod imzalama kimliği.
 # Sabit bir kimlik, Erişilebilirlik izninin yeniden derlemelerde korunmasını
@@ -18,6 +18,10 @@ app:
 # /Applications içine kurar (çalışan sürümü kapatır)
 install:
 	CODE_SIGN_IDENTITY="$(SIGN_IDENTITY)" Scripts/build-app.sh install
+
+# dağıtılabilir DMG üretir (dist/UltimateScrollWM-<sürüm>.dmg)
+dmg:
+	CODE_SIGN_IDENTITY="$(SIGN_IDENTITY)" Scripts/package-dmg.sh
 
 run:
 	swift run
