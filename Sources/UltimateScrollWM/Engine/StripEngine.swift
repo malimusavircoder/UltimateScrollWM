@@ -12,7 +12,8 @@ final class StripEngine: ObservableObject {
     @Published var hasPermission: Bool = false
     
     private let accessibility = AccessibilityManager.shared
-    private var refreshTimer: Timer?
+    /// Olay bildirimleri kısa sürede ardı ardına gelir; tek tazelemede birleştirilir.
+    private var pendingRefresh: DispatchWorkItem?
     private var screenFrame: CGRect = .zero
     private var isStarted = false
     private let widthPresets: [CGFloat] = [0.5, 2.0 / 3.0, 1.0]
@@ -33,25 +34,30 @@ final class StripEngine: ObservableObject {
         updateScreenFrame()
         refreshWindows()
         applyLayout()
-        
-        // Poll for new/closed windows every 0.8s (MVP – later we can use notifications)
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 0.8, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.refreshWindows()
-            }
+
+        // Neden sürekli yoklama YOK?
+        // Pencere düzenini paneru yapıyor (`managesLayout = false`), dolayısıyla
+        // bu motorun pencere listesi yalnızca arayüzü besler (menü çubuğundaki
+        // pencere sayısı, seçici). Eskiden 0.8 sn'de bir TÜM uygulamaların
+        // pencereleri Erişilebilirlik API'siyle taranıyordu; bu boşuna CPU ve
+        // pil harcıyordu. Artık yalnızca gerçekten bir şey değiştiğinde
+        // tazeliyoruz.
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [
+            NSWorkspace.didLaunchApplicationNotification,
+            NSWorkspace.didTerminateApplicationNotification,
+            NSWorkspace.didActivateApplicationNotification,
+            NSWorkspace.didHideApplicationNotification,
+            NSWorkspace.didUnhideApplicationNotification,
+            NSWorkspace.activeSpaceDidChangeNotification,
+        ] {
+            center.addObserver(self, selector: #selector(workspaceChanged), name: name, object: nil)
         }
-        
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(activeSpaceChanged),
-            name: NSWorkspace.activeSpaceDidChangeNotification,
-            object: nil
-        )
     }
     
     func stop() {
-        refreshTimer?.invalidate()
-        refreshTimer = nil
+        pendingRefresh?.cancel()
+        pendingRefresh = nil
         NSWorkspace.shared.notificationCenter.removeObserver(self)
         isStarted = false
     }
@@ -86,9 +92,9 @@ final class StripEngine: ObservableObject {
         guard isEnabled && hasPermission else { return }
 
         // Pencere seçici açıkken listeyi/seçimi DEĞİŞTİRME: seçici kendi anlık
-        // görüntüsüyle çalışır. Aksi hâlde 0.8 sn'lik yoklama sayacı seçimi
-        // gerçek odaktaki pencereye geri sıfırlıyor ve ⌥Tab yalnızca iki
-        // pencere arasında gidip geliyordu.
+        // görüntüsüyle çalışır. Aksi hâlde araya giren bir tazeleme (menü
+        // açılışı, çalışma alanı olayı) seçimi gerçek odaktaki pencereye geri
+        // sıfırlar ve ⌥Tab yalnızca iki pencere arasında gidip gelir.
         guard !isSwitcherSessionActive else { return }
         
         let focusedElement = accessibility.focusedWindow()
@@ -297,10 +303,17 @@ final class StripEngine: ObservableObject {
         }
     }
     
-    // MARK: - Notifications
+    // MARK: - Olaylar
     
-    @objc private func activeSpaceChanged() {
-        // MVP: just refresh
-        refreshWindows()
+    /// Çalışma alanı olaylarında pencere listesini tazeler.
+    ///
+    /// Bildirimler kısa sürede ardı ardına gelebilir (ör. bir uygulama
+    /// açılırken hem `launch` hem `activate` gelir); bu yüzden hepsi tek bir
+    /// tazelemede birleştirilir.
+    @objc private func workspaceChanged() {
+        pendingRefresh?.cancel()
+        let item = DispatchWorkItem { [weak self] in self?.refreshWindows() }
+        pendingRefresh = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: item)
     }
 }

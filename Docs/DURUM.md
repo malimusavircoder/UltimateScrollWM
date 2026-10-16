@@ -92,6 +92,16 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
     `WindowInfo`'ya `subrole` alanı eklendi ve `secici.txt`'e "rol" sütunu olarak
     yazılıyor (gözlem: hepsi `AXStandardWindow` — yani filtreyi role dayamak
     ayrım sağlamazdı).
+14. **Olay tabanlı tazeleme**: 0.8 sn'lik yoklama sayacı kaldırıldı. Pencere
+    düzenini paneru yaptığı için (`managesLayout = false`) bu motorun pencere
+    listesi **yalnızca arayüzü** besliyordu (menü çubuğundaki pencere sayısı,
+    seçici) — buna rağmen her 0.8 sn'de tüm uygulamaların pencereleri
+    Erişilebilirlik API'siyle taranıyordu. Artık tazeleme yalnızca:
+    `NSWorkspace` bildirimleri (uygulama açıldı/kapandı/ön plana geldi,
+    gizlendi/gösterildi, çalışma alanı değişti), menü her açıldığında
+    (`onAppear`) ve seçici oturumu başında. Bildirimler 0.35 sn'de birleştirilir.
+    **Ölçüm**: uygulama boşta 15 saniyede **0.00 s** CPU harcadı (öncesinde
+    sürekli tarama vardı).
 
 ## Tespit edilen sorunlar
 
@@ -196,6 +206,7 @@ istenirse:
    bayrağıyla) gösteriliyor.
 4. ✅ **Pencere değiştirici.** `⌥` bırakılınca onaylama yapıldı (bkz. 10. madde).
    Kalan isteğe bağlı iş: gerçek pencere önizlemeleri (CGWindowList).
-5. **Olay tabanlı tazeleme.** 0.8 sn polling yerine `AXObserver` + panel açılışında tazeleme.
+5. ✅ **Olay tabanlı tazeleme.** 0.8 sn'lik yoklama kaldırıldı; `NSWorkspace`
+   bildirimleri + menü açılışı (bkz. 14. madde).
 6. **İlk kurulum sihirbazı.** İzin/eksik ayar kontrolü ("Mac Setup check").
 7. **Karar**: `StripEngine` bitirilecek mi (paneru'suz çalışma) yoksa kaldırılacak mı?

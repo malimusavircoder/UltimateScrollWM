@@ -119,6 +119,10 @@ struct MenuBarView: View {
         }
         .padding(14)
         .frame(width: 280)
+        // Menü her açıldığında listeyi tazele. Sürekli yoklama yapmadığımız
+        // için pencere sayısı ve odak bilgisi en geç burada güncellenir —
+        // yani tam kullanıcının baktığı anda.
+        .onAppear { engine.refreshWindows() }
     }
     
     private var statusText: String {
