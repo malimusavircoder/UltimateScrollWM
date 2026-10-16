@@ -124,6 +124,48 @@ sertifikaya bağlar ve izin yeniden derlemelerde korunur.
   eklemek gerekebilir. Anahtarı kapat-aç tek başına yetmeyebilir.
 - Sorun çıkarsa tek bakılacak yer: `durum.txt` ve `paneru.log`.
 
+## Dağıtım (DMG) ve bilinen kısıtlar
+
+`make dmg` → `dist/UltimateScrollWM-<sürüm>.dmg`. Uygulama ve gömülü `paneru`
+Developer ID ile imzalanır, DMG'nin kendisi de imzalanır ve doğrulanır.
+DMG'deki uygulamanın *Designated Requirement*'ı kurulu sürümle birebir aynı
+olduğu için **Erişilebilirlik izni güncellemede korunur**.
+Son kullanıcı kılavuzu: `Docs/KURULUM.md`.
+
+### Not 1 — Paket yalnızca `arm64` (Intel Mac'lerde çalışmaz)
+
+Hem uygulama hem gömülü `paneru` `arm64` olarak derleniyor. Evrensel (universal)
+paket gerekirse:
+
+1. Rust hedefini ekle: `rustup target add x86_64-apple-darwin`
+2. paneru'yu iki mimari için derle:
+   `cargo build --release --target aarch64-apple-darwin` ve
+   `cargo build --release --target x86_64-apple-darwin`
+3. İkisini birleştir:
+   `lipo -create -output paneru <arm64>/paneru <x86_64>/paneru`
+4. Uygulamayı evrensel derle: `swift build -c release --arch arm64 --arch x86_64`
+5. `Scripts/build-app.sh` kopyalama adımı evrensel ikiliyle olduğu gibi çalışır.
+
+### Not 2 — Notarization (başkalarına dağıtım için)
+
+Şu an **notarize edilmiyor** (kişisel kullanım); bu yüzden başka bir Mac'te ilk
+açılışta Gatekeeper uyarısı çıkar (çözümü `Docs/KURULUM.md`'de). Dağıtmak
+istenirse:
+
+1. Kimlik bilgisi kaydet (Apple Developer hesabı gerekir):
+   `xcrun notarytool store-credentials`
+   (uygulamaya özel parola **veya** App Store Connect API anahtarı)
+2. İkileri hardened runtime ile imzala: `codesign --options runtime --timestamp`
+3. Gönder: `xcrun notarytool submit <dosya> --keychain-profile <ad> --wait`
+4. Bileti iliştir: `xcrun stapler staple <dosya>`
+
+> ⚠️ **Tuzak:** paneru **LuaJIT** ile derlenmiştir; Lua betiği kullanıldığında
+> JIT çalışması gerekir ve hardened runtime bunu engeller. Bu yüzden paneru'ya
+> `com.apple.security.cs.allow-jit` (gerekirse ayrıca
+> `com.apple.security.cs.allow-unsigned-executable-memory`) entitlement'ı
+> verilmelidir. Şimdilik `Scripts/package-dmg.sh` runtime bayrağını
+> kullanmıyor — notarization'a geçilirse önce bu entitlement eklenmeli.
+
 ## Önerilen yol haritası
 
 1. ✅ **Ayarlar → `config.toml` köprüsü.** Tamamlandı (bkz. yukarı). Genişletilebilir:

@@ -81,6 +81,26 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 
 Ayrıntılı inceleme ve önceliklendirilmiş yol haritası: **[`Docs/DURUM.md`](Docs/DURUM.md)**.
 
+## Dağıtım
+
+```bash
+make dmg      # -> dist/UltimateScrollWM-<sürüm>.dmg
+```
+
+Uygulama ve gömülü `paneru` Developer ID ile imzalanır, DMG'nin kendisi de
+imzalanır ve doğrulanır. Son kullanıcı kurulum kılavuzu (Gatekeeper, izin,
+güncelleme, kaldırma): **[`Docs/KURULUM.md`](Docs/KURULUM.md)**.
+
+**Kısıtlar**
+
+- Paket yalnızca **`arm64`** (Apple Silicon). Intel Mac'lerde çalışmaz;
+  evrensel derleme adımları `Docs/DURUM.md`'de (Not 1).
+- DMG **notarize edilmemiştir** (kişisel kullanım). Başka bir Mac'te ilk
+  açılışta Gatekeeper uyarısı çıkar — çözümü `Docs/KURULUM.md`'de.
+- Notarization'a geçilecekse paneru **LuaJIT** kullandığı için
+  `com.apple.security.cs.allow-jit` entitlement'ı gerekir; ayrıntı
+  `Docs/DURUM.md` (Not 2) ve `Scripts/package-dmg.sh` başlığında.
+
 ## Proje Yapısı
 
 ```
@@ -89,7 +109,9 @@ UltimateScrollWM/
 ├── Package.swift
 ├── AppBundle/Info.plist            → .app paketleme şablonu
 ├── Scripts/build-app.sh            → .app üretici/kurucu
+├── Scripts/package-dmg.sh          → imzalı DMG üretici
 ├── Docs/DURUM.md                   → durum + yol haritası
+├── Docs/KURULUM.md                 → son kullanıcı kurulum kılavuzu
 └── Sources/UltimateScrollWM/
     ├── App/UltimateScrollWMApp.swift
     ├── Engine/  (PaneruService, StripEngine, AccessibilityManager, HotKeyManager,
