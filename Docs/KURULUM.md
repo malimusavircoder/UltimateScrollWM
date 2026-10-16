@@ -92,12 +92,23 @@ Nadir de olsa macOS bayat bir kaydı tutabiliyor:
 | `⌃⌥ ]` / `⌃⌥⇧ ]` | Stack'le / stack'ten çıkar |
 | `⌃⌥ 0` | Stack yüksekliklerini eşitle |
 | `⌥Tab` | Pencere seçici (`⌥` basılı tut, `Tab`'la gez, bırakınca seç) |
+| `⌥Tab` → hücredeki `✕` | Seçici açıkken pencereyi kapat (`⌥` basılıyken tıkla) |
 
 - **4 parmak yatay** kaydırma → şeridi kaydır
 - **4 parmak dikey** kaydırma → sanal çalışma alanı
 - Menü çubuğu → **Ayarlar…** → boşluk, çerçeve, karartma vb.
 - Menü çubuğu → **Yapılandırma Dosyasını Göster** → `config.toml`'u elle düzenle
   (kaydedince anında etki eder)
+
+### Pencere önizlemeleri (isteğe bağlı)
+
+`⌥Tab` seçicisi pencerelerin **gerçek görüntüsünü** gösterebilir. Bunun için
+menü çubuğu menüsünden **İzin İste**'ye bas ve
+**Sistem Ayarları → Gizlilik ve Güvenlik → Ekran Kaydı** bölümünde
+UltimateScrollWM'i aç.
+
+- İzin verilmezse seçici yine çalışır; hücrelerde uygulama simgesi görünür.
+- macOS, iznin etkili olması için **uygulamayı yeniden başlatmanı** ister.
 
 ## Kaldırma
 

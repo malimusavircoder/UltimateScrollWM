@@ -79,6 +79,32 @@ struct MenuBarView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+                if !WindowThumbnailProvider.shared.hasPermission {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Pencere önizlemesi kapalı")
+                            .font(.caption.weight(.semibold))
+
+                        Text("⌥Tab seçicisinde gerçek pencere görüntüleri için Ekran Kaydı izni gerekiyor. İznin etkin olması için uygulamayı yeniden başlat.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        HStack(spacing: 6) {
+                            Button("İzin İste") {
+                                _ = WindowThumbnailProvider.shared.requestPermission()
+                            }
+                            .buttonStyle(.borderedProminent)
+
+                            Button("Ayarları Aç") {
+                                WindowThumbnailProvider.shared.openPermissionSettings()
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                    }
+                }
             }
             
             Divider()

@@ -11,12 +11,16 @@ import SwiftUI
 @MainActor
 final class WindowSwitcherController {
     private weak var engine: StripEngine?
-    private var panel: NSPanel?
+    private var panel: SwitcherPanel?
 
     /// `⌥` bırakılışını yakalayan genel izleyici (Erişilebilirlik izni gerektirir).
     private var flagsMonitor: Any?
     /// `Esc` ile iptal için genel tuş izleyici.
     private var keyMonitor: Any?
+    /// Panel anahtar pencere olduğunda (ör. `✕` tıklandığında) olaylar artık
+    /// genel izleyiciye düşmez; bunlar aynı işi yerel olarak yapar.
+    private var localFlagsMonitor: Any?
+    private var localKeyMonitor: Any?
     /// `⌥` bırakılışı kaçırılırsa panelin takılı kalmasını önleyen emniyet zamanlayıcısı.
     private var safetyWorkItem: DispatchWorkItem?
     private var isActive = false
@@ -74,10 +78,24 @@ final class WindowSwitcherController {
             DispatchQueue.main.async { self?.commit() }
         }
 
+        localFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            guard let self, self.isActive else { return event }
+            if !event.modifierFlags.contains(.option) { self.commit() }
+            return event
+        }
+
         // Esc ile iptal.
         keyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard event.keyCode == 53 else { return } // Esc
             DispatchQueue.main.async { self?.cancel() }
+        }
+
+        // Panel anahtar pencereyken Esc'i **tüket**: arkadaki uygulamaya gitmesin.
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.isActive else { return event }
+            guard event.keyCode == 53 else { return event } // Esc
+            self.cancel()
+            return nil
         }
     }
 
@@ -89,6 +107,19 @@ final class WindowSwitcherController {
         let item = DispatchWorkItem { [weak self] in self?.commit() }
         safetyWorkItem = item
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    /// Seçicideki pencereyi kapatır, sonra paneli yeni boyuta göre tazeler.
+    private func closeWindow(at index: Int) {
+        guard let engine else { return }
+        engine.closeSwitcherWindow(at: index)
+
+        if engine.state.windows.isEmpty {
+            endSession()
+        } else {
+            present(engine: engine)
+            scheduleSafety()
+        }
     }
 
     private func endSession() {
@@ -103,7 +134,16 @@ final class WindowSwitcherController {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
         }
+        if let localFlagsMonitor {
+            NSEvent.removeMonitor(localFlagsMonitor)
+            self.localFlagsMonitor = nil
+        }
+        if let localKeyMonitor {
+            NSEvent.removeMonitor(localKeyMonitor)
+            self.localKeyMonitor = nil
+        }
         panel?.orderOut(nil)
+        WindowThumbnailProvider.shared.endSession()
         engine?.endSwitcherSession()
     }
 
@@ -111,8 +151,13 @@ final class WindowSwitcherController {
 
     private func present(engine: StripEngine) {
         if panel == nil {
-            let hosting = NSHostingView(rootView: WindowSwitcherView(engine: engine))
-            let newPanel = NSPanel(
+            let hosting = SwitcherHostingView(
+                rootView: WindowSwitcherView(
+                    engine: engine,
+                    onClose: { [weak self] index in self?.closeWindow(at: index) }
+                )
+            )
+            let newPanel = SwitcherPanel(
                 contentRect: NSRect(x: 0, y: 0, width: 420, height: 240),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
@@ -124,11 +169,17 @@ final class WindowSwitcherController {
             newPanel.backgroundColor = .clear
             newPanel.hasShadow = true
             newPanel.isMovable = false
+            // Yardımcı panel kuralı: içindeki düğmeler (✕) tıklanabilsin ama
+            // uygulama öne gelmesin.
+            newPanel.isFloatingPanel = true
+            newPanel.becomesKeyOnlyIfNeeded = true
             newPanel.contentView = hosting
             panel = newPanel
         }
 
         guard let panel, let hosting = panel.contentView else { return }
+
+        let wasVisible = panel.isVisible
 
         // İçerik boyutu pencere sayısına göre değişir; kendini ölçmesine izin ver.
         hosting.layoutSubtreeIfNeeded()
@@ -138,7 +189,8 @@ final class WindowSwitcherController {
         }
         panel.setContentSize(size)
 
-        if let screen = NSScreen.main {
+        // Panel açıkken yeniden ortalamayalım (kapatma sonrası zıplamasın).
+        if !wasVisible, let screen = NSScreen.main {
             panel.setFrameOrigin(NSPoint(
                 x: screen.visibleFrame.midX - size.width / 2,
                 y: screen.visibleFrame.midY - size.height / 2
@@ -146,4 +198,14 @@ final class WindowSwitcherController {
         }
         panel.orderFrontRegardless()
     }
+}
+
+/// İçindeki düğmelerin tek tıklamayla çalışması için.
+private final class SwitcherHostingView: NSHostingView<WindowSwitcherView> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+/// Uygulamayı öne getirmeden anahtar pencere olabilen panel.
+private final class SwitcherPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }

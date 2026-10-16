@@ -266,6 +266,28 @@ final class StripEngine: ObservableObject {
         accessibility.raiseWindow(focused.id)
     }
 
+    /// Seçicideki bir pencereyi kapatır ve listeyi hemen günceller.
+    ///
+    /// Kapatma AX üzerinden asenkron işler; pencere birazdan kaybolur ama
+    /// kullanıcı beklemesin diye listeden **anında** düşürülür.
+    func closeSwitcherWindow(at index: Int) {
+        guard state.windows.indices.contains(index) else { return }
+        let window = state.windows[index]
+        _ = accessibility.closeWindow(window.id)
+
+        state.windows.remove(at: index)
+        guard !state.windows.isEmpty else {
+            state.focusedIndex = 0
+            return
+        }
+        if state.focusedIndex >= state.windows.count {
+            state.focusedIndex = state.windows.count - 1
+        }
+        for i in state.windows.indices {
+            state.windows[i].columnIndex = i
+        }
+    }
+
     func moveFocusedNext() {
         state.moveFocused(by: 1)
         applyLayout()

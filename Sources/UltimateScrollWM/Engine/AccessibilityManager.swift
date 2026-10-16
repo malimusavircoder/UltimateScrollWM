@@ -216,6 +216,23 @@ final class AccessibilityManager {
         )
     }
     
+    /// Pencerenin kapatma düğmesine basar (kırmızı trafik ışığı).
+    ///
+    /// Kaydedilmemiş değişiklik varsa uygulama kendi onay penceresini gösterir;
+    /// business burada beklenmez.
+    @discardableResult
+    func closeWindow(_ element: AXUIElement) -> Bool {
+        var buttonRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXCloseButtonAttribute as CFString,
+            &buttonRef
+        ) == .success, let buttonRef else { return false }
+
+        let button = unsafeBitCast(buttonRef, to: AXUIElement.self)
+        return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
+    }
+
     private func isWindowVisible(_ element: AXUIElement) -> Bool {
         // Basic check – more sophisticated filtering can be added later
         var value: CFTypeRef?

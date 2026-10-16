@@ -102,6 +102,35 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
     (`onAppear`) ve seçici oturumu başında. Bildirimler 0.35 sn'de birleştirilir.
     **Ölçüm**: uygulama boşta 15 saniyede **0.00 s** CPU harcadı (öncesinde
     sürekli tarama vardı).
+15. **Gerçek pencere önizlemeleri (⌥Tab)**: Her hücrede pencerenin gerçek
+    görüntüsü. `CGWindowListCreateImage` macOS 15'te **kaldırıldı** — macOS 27
+    SDK'sında artık derlenmiyor ("Please use ScreenCaptureKit instead"), bu
+    yüzden önizleme **ScreenCaptureKit** ile yapılıyor:
+    `SCShareableContent` → `SCContentFilter(desktopIndependentWindow:)` →
+    `SCScreenshotManager.captureImage`.
+    - AX penceresiyle `SCWindow`, önce **konum + boyut** (ikisi de sol-üst
+      orijinli ekran koordinatı kullanır), olmazsa aynı uygulama + **aynı
+      başlık** ile eşleştirilir. Bu ikinci deneme minimize pencereler için.
+    - Yakalamalar **sırayla** yapılır (`serialized`): 20 hücre aynı anda isterse
+      pencere sunucusu boğulur ve panel geç açılır. Sırayla yapınca hücreler
+      tek tek dolar, panel hemen tepki verir.
+    - Görüntüler önbellekte tutulur (64 kayıt sınırı), aynı pencere tekrar
+      yakalanmaz.
+    - **Yeni izin gereği:** Ekran Kaydı. İzin yoksa önizleme **sessizce**
+      uygulama simgesine düşer — seçici hiçbir durumda bozulmaz. Menü çubuğu
+      menüsünde "İzin İste" ve "Ayarları Aç" düğmeleri var. İzin verildikten
+      sonra **uygulama yeniden başlatılmalı** (macOS'un kuralı).
+16. **Seçicide `✕` ile pencere kapatma**: Her hücrenin sağ üst köşesinde
+    kapatma düğmesi; pencerenin `kAXCloseButtonAttribute` düğmesine `AXPress`
+    gönderir. Pencere listeden **anında** düşürülür (AX kapatması asenkron
+    çalışır), seçim ve panel boyutu buna göre düzeltilir. Kaydedilmemiş
+    değişiklik varsa uygulama kendi onay penceresini gösterir.
+    - Panel `isFloatingPanel` + `becomesKeyOnlyIfNeeded` + `acceptsFirstMouse`
+      ile kuruldu: düğme **tek tıklamayla** çalışır ama uygulama öne gelmez.
+    - Tıklama paneli anahtar pencere yapabildiği için `⌥` bırakılışını yakalayan
+      **yerel** izleyici de eklendi (yoksa oturum takılı kalırdı).
+    - Yerel tuş izleyicisi `Esc`'i **tüketir**: panel anahtar pencereyken Esc
+      arkadaki uygulamaya gitmez.
 
 ## Tespit edilen sorunlar
 
@@ -205,7 +234,8 @@ istenirse:
 3. ✅ **Açılış davranışı.** Ayarlar penceresi yalnızca ilk açılışta (veya `--settings`
    bayrağıyla) gösteriliyor.
 4. ✅ **Pencere değiştirici.** `⌥` bırakılınca onaylama yapıldı (bkz. 10. madde).
-   Kalan isteğe bağlı iş: gerçek pencere önizlemeleri (CGWindowList).
+   Gerçek pencere önizlemeleri ScreenCaptureKit ile eklendi (bkz. 15. madde),
+   hücre başına `✕` kapatma düğmesi eklendi (bkz. 16. madde).
 5. ✅ **Olay tabanlı tazeleme.** 0.8 sn'lik yoklama kaldırıldı; `NSWorkspace`
    bildirimleri + menü açılışı (bkz. 14. madde).
 6. **İlk kurulum sihirbazı.** İzin/eksik ayar kontrolü ("Mac Setup check").

@@ -5,13 +5,23 @@ import AppKit
 ///
 /// Windows'taki `Alt+Tab` gibi davranır: pencereler ızgara hâlinde listelenir,
 /// `⌘M` ile simge durumuna küçültülmüş olanlar da **bir işaretle** görünür.
+///
+/// İki ek özellik:
+///   * Her hücrede gerçek pencere görüntüsü (Ekran Kaydı izni varsa).
+///   * Her hücrenin köşesinde pencereyi kapatan `✕` düğmesi.
 struct WindowSwitcherView: View {
     @ObservedObject var engine: StripEngine
 
+    /// `✕` tıklandığında denetleyiciye haber verilir; böylece panel yeni
+    /// pencere sayısına göre yeniden boyutlanabilir.
+    var onClose: ((Int) -> Void)?
+
     /// Panel boyutunu hesaplarken denetleyici de bu değerleri kullanır.
     enum Layout {
-        static let cellWidth: CGFloat = 132
-        static let cellHeight: CGFloat = 118
+        static let cellWidth: CGFloat = 150
+        static let cellHeight: CGFloat = 134
+        static let previewWidth: CGFloat = 122
+        static let previewHeight: CGFloat = 72
         static let spacing: CGFloat = 10
         static let padding: CGFloat = 18
         static let maxColumns = 5
@@ -60,6 +70,7 @@ struct WindowSwitcherView: View {
             Label("bırakınca seç", systemImage: "option")
             Label("Tab ile gez", systemImage: "arrow.left.arrow.right")
             Label("Esc iptal", systemImage: "escape")
+            Label("kapat", systemImage: "xmark.circle")
         }
         .font(.caption2)
         .foregroundStyle(.secondary)
@@ -72,19 +83,7 @@ struct WindowSwitcherView: View {
         let selected = index == engine.state.focusedIndex
 
         VStack(spacing: 6) {
-            ZStack(alignment: .bottomTrailing) {
-                appIcon(for: window.pid)
-                    .frame(width: 44, height: 44)
-                    .opacity(window.isMinimized ? 0.5 : 1)
-
-                if window.isMinimized {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.system(size: 13))
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(.white, .secondary)
-                        .offset(x: 4, y: 4)
-                }
-            }
+            WindowPreview(window: window, size: previewSize)
 
             Text(window.appName)
                 .font(.caption.weight(.semibold))
@@ -104,20 +103,39 @@ struct WindowSwitcherView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(selected ? Color.accentColor : .clear, lineWidth: 3)
         }
+        .overlay(alignment: .topTrailing) {
+            closeButton(index: index)
+                .padding(5)
+        }
     }
 
-    @ViewBuilder
-    private func appIcon(for pid: pid_t) -> some View {
-        if let icon = NSRunningApplication(processIdentifier: pid)?.icon {
-            Image(nsImage: icon)
-                .resizable()
-                .scaledToFit()
-        } else {
-            Image(systemName: "macwindow")
-                .resizable()
-                .scaledToFit()
-                .foregroundStyle(.secondary)
+    /// Pencerenin kapatma (`✕`) düğmesi.
+    private func closeButton(index: Int) -> some View {
+        Button {
+            close(at: index)
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 18, height: 18)
+                .background(Circle().fill(Color.black.opacity(0.55)))
+                .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 0.5))
+                .contentShape(Circle())
         }
+        .buttonStyle(.plain)
+        .help("Pencereyi kapat")
+    }
+
+    private func close(at index: Int) {
+        if let onClose {
+            onClose(index)
+        } else {
+            engine.closeSwitcherWindow(at: index)
+        }
+    }
+
+    private var previewSize: CGSize {
+        CGSize(width: Layout.previewWidth, height: Layout.previewHeight)
     }
 
     // MARK: - Hesaplar
@@ -152,5 +170,65 @@ struct WindowSwitcherView: View {
         let page = engine.state.focusedIndex / Layout.maxVisible + 1
         let pageCount = (total + Layout.maxVisible - 1) / Layout.maxVisible
         return "\(total) pencere · \(page)/\(pageCount)"
+    }
+}
+
+/// Hücre içindeki pencere görüntüsü.
+///
+/// Önizleme alınamıyorsa (Ekran Kaydı izni yok ya da pencere yakalanamadı)
+/// sessizce uygulama simgesine düşer — seçici hiçbir durumda bozulmaz.
+private struct WindowPreview: View {
+    let window: WindowInfo
+    let size: CGSize
+
+    @State private var image: NSImage?
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                AppIcon(pid: window.pid)
+                    .frame(width: 40, height: 40)
+            }
+
+            if window.isMinimized {
+                Image(systemName: "minus.circle.fill")
+                    .font(.system(size: 13))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .secondary)
+                    .offset(x: 4, y: 4)
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .task(id: taskID) {
+            image = await WindowThumbnailProvider.shared.thumbnail(for: window, size: size)
+        }
+    }
+
+    /// Aynı pencere için tekrar tekrar yakalama yapılmasın.
+    private var taskID: String {
+        "\(window.pid)|\(window.title)|\(Int(window.frame.width))x\(Int(window.frame.height))"
+    }
+}
+
+/// Uygulama simgesi (önizleme yokken kullanılır).
+private struct AppIcon: View {
+    let pid: pid_t
+
+    var body: some View {
+        if let icon = NSRunningApplication(processIdentifier: pid)?.icon {
+            Image(nsImage: icon)
+                .resizable()
+                .scaledToFit()
+        } else {
+            Image(systemName: "macwindow")
+                .resizable()
+                .scaledToFit()
+                .foregroundStyle(.secondary)
+        }
     }
 }
