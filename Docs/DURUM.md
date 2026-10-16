@@ -47,6 +47,10 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 6. **Zarif kapatma + akıllı açılış**: kapatırken paneru'ya `quit` komutu gönderiliyor
    (gerekirse SIGTERM/SIGINT ile zorlanıyor); ayarlar penceresi artık her açılışta
    değil, yalnızca ilk açılışta, `--settings` bayrağıyla veya izin eksikken açılıyor.
+7. **Karartma anahtarı düzeltildi**: yalnızca gündüz değerini (`opacity`) yazıyordu;
+   gece değeri (`opacity_night`) dokunulmadığı için gece modunda karartma geri
+   geliyordu. Artık ikisi birlikte yazılıyor. Ayrıca `SettingsStore.batch()` ile
+   boşluk kaydırıcısı 4 ayrı dosya yazımı yerine tek yazım yapıyor.
 
 ## Tespit edilen sorunlar
 
@@ -77,6 +81,22 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 - Güncelleme kontrolü yok.
 - Paneru sürümü elle gömülü; yükseltme akışı yok.
 - Native `StripEngine`'in geleceği belirsiz (bitirilsin mi, kaldırılsın mı?).
+
+## İmzalama ve Erişilebilirlik izni
+
+`make install` uygulamayı **ad-hoc** (`codesign --sign -`) imzalar. Bu durumda macOS,
+Erişilebilirlik iznini ikili dosyanın parmak izine (CDHash) bağlar; kod her
+derlendiğinde parmak izi değişir ve izni yeniden vermek gerekir.
+
+Kalıcı çözüm, sabit bir kimlikle imzalamaktır — bu makinede mevcut olan Developer ID
+ile tek satır yeterlidir:
+
+```bash
+CODE_SIGN_IDENTITY="Developer ID Application: Ad Soyad (TEAMID)" make install
+```
+
+Böylece macOS izni sertifikaya bağlar ve yeniden derlemeler izni bozmaz.
+(`Scripts/build-app.sh` bu değişkeni okur; değer verilmezse ad-hoc'a düşer.)
 
 ## Önerilen yol haritası
 
