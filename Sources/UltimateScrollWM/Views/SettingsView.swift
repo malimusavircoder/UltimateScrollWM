@@ -20,6 +20,7 @@ struct SettingsView: View {
     @ObservedObject var engine: StripEngine
     @ObservedObject var backend: PaneruService
     @StateObject private var loginItem = LoginItemManager()
+    @StateObject private var settings = SettingsStore()
     @State private var page: SettingsPage? = .home
 
     var body: some View {
@@ -34,9 +35,9 @@ struct SettingsView: View {
                 Group {
                     switch page ?? .home {
                     case .home: HomeSettings(engine: engine, backend: backend, loginItem: loginItem)
-                    case .layout: LayoutSettings(engine: engine, backend: backend)
+                    case .layout: LayoutSettings(settings: settings, backend: backend)
                     case .shortcuts: ShortcutSettings()
-                    case .advanced: AdvancedSettings(backend: backend)
+                    case .advanced: AdvancedSettings(backend: backend, settings: settings)
                     }
                 }
                 .frame(maxWidth: 760, alignment: .leading)
@@ -100,28 +101,30 @@ private struct HomeSettings: View {
 }
 
 private struct LayoutSettings: View {
-    @ObservedObject var engine: StripEngine
+    @ObservedObject var settings: SettingsStore
     @ObservedObject var backend: PaneruService
-    @AppStorage("focusBorder") private var focusBorder = true
-    @AppStorage("dimInactive") private var dimInactive = true
-    @AppStorage("stripMinimap") private var stripMinimap = true
-    @AppStorage("fourFingerSwipe") private var fourFingerSwipe = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            SettingsHeader(title: "Pencere Düzeni", subtitle: "Şeridin görünüşünü ve pencerelerin nasıl davranacağını ayarla.")
+            SettingsHeader(title: "Pencere Düzeni", subtitle: "Şeridin görünüşünü ve pencerelerin nasıl davranacağını ayarla. Değişiklikler anında uygulanır.")
             GroupBox("Boyut ve boşluk") {
                 VStack(spacing: 18) {
                     HStack {
                         Text("Pencereler arası boşluk")
                         Spacer()
                         Slider(value: gap, in: 0...24, step: 1).frame(width: 240)
-                        Text("\(Int(engine.state.gap)) px").monospacedDigit().frame(width: 45)
+                        Text("\(settings.int("padding.left", default: 6)) px").monospacedDigit().frame(width: 45)
                     }
-                    Toggle("Odaktaki pencereyi renkli çerçeveyle göster", isOn: $focusBorder)
-                    Toggle("Pasif pencereleri hafifçe karart", isOn: $dimInactive)
-                    Toggle("Gezinirken şerit minimap'ini göster", isOn: $stripMinimap)
-                    Toggle("Dört parmakla şeritte kaydır", isOn: $fourFingerSwipe)
+                    Toggle("Odaktaki pencereyi renkli çerçeveyle göster", isOn: toggle("decorations.active.border.enabled", default: false))
+                    Toggle("Pasif pencereleri hafifçe karart", isOn: dimmed)
+                    Toggle("Odak değişince pencereyi ortala", isOn: toggle("options.auto_center", default: false))
+                    Toggle("Dört parmakla şeritte kaydır", isOn: fourFingerSwipe)
+                }.padding(10)
+            }
+            GroupBox("Odak") {
+                VStack(spacing: 18) {
+                    Toggle("Odak fareyi takip etsin", isOn: toggle("options.focus_follows_mouse", default: true))
+                    Toggle("Klavyeyle odak değişince fare pencereye gitsin", isOn: toggle("options.mouse_follows_focus", default: true))
                 }.padding(10)
             }
             GroupBox("Sütunlar") {
@@ -132,11 +135,45 @@ private struct LayoutSettings: View {
                     CommandButton(title: "Eşitle", icon: "equal.square", command: ["window", "equalize"], backend: backend)
                 }.padding(8)
             }
+            if let error = settings.errorMessage {
+                Text("Yapılandırma yazılamadı: \(error)")
+                    .font(.caption).foregroundStyle(.red)
+            }
         }
     }
 
+    private func toggle(_ path: String, default fallback: Bool) -> Binding<Bool> {
+        Binding(get: { settings.bool(path, default: fallback) },
+                set: { settings.setBool(path, $0) })
+    }
+
     private var gap: Binding<Double> {
-        Binding(get: { Double(engine.state.gap) }, set: { engine.state.gap = CGFloat($0); engine.applyLayout() })
+        Binding(
+            get: { Double(settings.int("padding.left", default: 6)) },
+            set: { newValue in
+                let value = Int(newValue)
+                settings.setInt("padding.top", value)
+                settings.setInt("padding.bottom", value)
+                settings.setInt("padding.left", value)
+                settings.setInt("padding.right", value)
+            }
+        )
+    }
+
+    /// Paneru'nun yerel karartma modu: yalnızca `opacity` negatifken etkin.
+    private var dimmed: Binding<Bool> {
+        Binding(
+            get: { settings.double("decorations.inactive.dim.opacity", default: 0) < 0 },
+            set: { settings.setDouble("decorations.inactive.dim.opacity", $0 ? -0.08 : 0) }
+        )
+    }
+
+    /// 3+ parmak hareketi paneru tarafından yakalanır; 3'ün altı devre dışı bırakır.
+    private var fourFingerSwipe: Binding<Bool> {
+        Binding(
+            get: { settings.int("swipe.gesture.fingers_count", default: 0) >= 3 },
+            set: { settings.setInt("swipe.gesture.fingers_count", $0 ? 4 : 0) }
+        )
     }
 }
 
@@ -163,18 +200,25 @@ private struct ShortcutSettings: View {
 
 private struct AdvancedSettings: View {
     @ObservedObject var backend: PaneruService
+    @ObservedObject var settings: SettingsStore
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             SettingsHeader(title: "Gelişmiş", subtitle: "Motoru yönet ve yapılandırmayı incele.")
             GroupBox {
                 VStack(alignment: .leading, spacing: 14) {
                     Button("Motoru yeniden başlat") { backend.restart() }
+                    Button("Yapılandırmayı yeniden yükle") { settings.reload() }
                     Button("Yapılandırmayı Finder'da göster") { backend.revealConfiguration() }
-                    Text("UltimateScrollWM 0.4 • Paneru 0.5.2 motoru").font(.caption).foregroundStyle(.secondary)
+                    Text("UltimateScrollWM \(Self.appVersion) • Paneru 0.5.2 motoru").font(.caption).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(10)
             }
+            if let error = settings.errorMessage { Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
             if let error = backend.lastError { Text(error).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
         }
+    }
+
+    private static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
     }
 }
 

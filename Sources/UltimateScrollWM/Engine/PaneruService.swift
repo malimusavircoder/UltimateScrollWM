@@ -85,6 +85,12 @@ final class PaneruService: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([configURL])
     }
 
+    /// Yapılandırma dosyasının yolunu döndürür; dosya yoksa gömülü
+    /// varsayılan yapılandırmadan oluşturur.
+    func makeConfigFileIfNeeded() throws -> URL {
+        try ensureConfiguration()
+    }
+
     private func ensureConfiguration() throws -> URL {
         let directory = try applicationSupportDirectory()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

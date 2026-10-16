@@ -39,6 +39,11 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
    reddediyordu). Gömülü motora çalışan kurulumdaki kimlik
    (`com.local.UltimateScrollWM.engine`) veriliyor.
 4. **README** gerçek SwiftPM akışına göre güncellendi.
+5. **Ayarlar → `config.toml` köprüsü**: `PaneruConfig` (minimal TOML düzenleyici) +
+   `SettingsStore` (tipli okuma/yazma). Arayüzdeki anahtarlar artık gerçekten paneru
+   yapılandırmasına yazılıyor; paneru canlı yeniden yüklediği için değişiklikler
+   anında uygulanıyor. Dosyanın geri kalanı (kısayollar, pencere kuralları, yorumlar)
+   korunuyor. `PaneruConfig` gerçek `default-config.toml` üzerinde 17 testle doğrulandı.
 
 ## Tespit edilen sorunlar
 
@@ -46,8 +51,8 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 
 | # | Sorun | Yer |
 | --- | --- | --- |
-| 1 | Ayarlardaki anahtarlar (`focusBorder`, `dimInactive`, `stripMinimap`, `fourFingerSwipe`) yalnızca `@AppStorage`'a yazıyor, paneru `config.toml`'a yazmıyor → **hiçbir etkisi yok** | `SettingsView.swift` |
-| 2 | Gap kaydırıcısı `engine.state.gap`'i değiştirip `applyLayout()` çağırıyor ama motor pasif → **etkisiz** | `SettingsView.swift` |
+| ✅ | ~~`@AppStorage` anahtarları işlevsizdi~~ → `SettingsStore` ile `config.toml`'a bağlandı | çözüldü |
+| ✅ | ~~Gap kaydırıcısı etkisizdi~~ → `[padding]` değerlerine yazıyor | çözüldü |
 | 3 | `stop()` sürece **SIGINT** gönderiyor; zarif çıkış `send-cmd quit` ile olur. SIGINT'te pencereler ekran dışında (parked) kalabilir | `PaneruService.swift:56` |
 | 4 | Motor her **0.8 sn**'de tüm pencereleri AX ile tarıyor, sadece değiştirici paneli için → gereksiz maliyet | `StripEngine.swift:38` |
 
@@ -72,9 +77,8 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
 
 ## Önerilen yol haritası
 
-1. **Ayarlar → `config.toml` köprüsü.** En yüksek değerli iş: arayüzdeki anahtarları
-   gerçekten paneru yapılandırmasına yazmak. Paneru yapılandırmayı **canlı yeniden
-   yükler**, yani değişiklikler anında uygulanır. Ölü anahtarlar böylece gerçek özellik olur.
+1. ✅ **Ayarlar → `config.toml` köprüsü.** Tamamlandı (bkz. yukarı). Genişletilebilir:
+   kısayol düzenleyici, pencere kuralları (per-app), ileri düzey paneru seçenekleri.
 2. **Zarif kapatma.** Çıkışta `send-cmd quit` gönder; pencereleri ekranda bırakma.
 3. **Açılış davranışı.** Ayarlar penceresini yalnızca ilk açılışta (veya `--settings`
    bayrağıyla) göster.
