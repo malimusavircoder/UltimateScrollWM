@@ -9,6 +9,7 @@ struct WindowInfo: Identifiable, Equatable {
     var title: String
     var frame: CGRect
     var isFloating: Bool = false
+    var isMinimized: Bool = false
     
     // For strip positioning
     var columnIndex: Int = 0

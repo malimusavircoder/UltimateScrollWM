@@ -71,6 +71,18 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
     `paneru` Developer ID ile imzalanır, sürükle-bırak DMG üretilir, DMG'nin
     kendisi de imzalanır ve doğrulanır. Kurulum kılavuzu: `Docs/KURULUM.md`.
     Notarization yok (kişisel kullanım); paket yalnızca `arm64`.
+12. **Pencere seçici düzeltmesi (⌥Tab)**: Seçici yalnızca iki pencere arasında
+    gidip geliyordu ve en fazla 6 pencere gösteriyordu. İki neden vardı:
+    (a) 0.8 sn'lik yoklama sayacı ile her basışta çağrılan `refreshWindows()`
+    seçimi **gerçek odaktaki pencereye geri sıfırlıyordu** — `Tab` → o+1, sayaç
+    sıfırla, `Tab` → yine o+1;
+    (b) panelde `min(count, 6)` sınırı vardı.
+    Artık liste **oturum başında bir kez** alınır (`beginSwitcherSession`),
+    seçici açıkken `refreshWindows` hiç çalışmaz, panel ızgara hâlinde **tüm
+    pencereleri** gösterir ve `⌘M` ile simge durumuna küçültülmüş pencereler de
+    listelenir (⊖ işaretiyle) — seçilince `raiseWindow` önce uygulamayı öne
+    getirip sonra minimize'i kaldırır. Seçicinin gördüğü liste, dışarıdan
+    doğrulanabilsin diye `secici.txt` dosyasına yazılır.
 
 ## Tespit edilen sorunlar
 

@@ -84,6 +84,12 @@ final class StripEngine: ObservableObject {
     
     func refreshWindows() {
         guard isEnabled && hasPermission else { return }
+
+        // Pencere seçici açıkken listeyi/seçimi DEĞİŞTİRME: seçici kendi anlık
+        // görüntüsüyle çalışır. Aksi hâlde 0.8 sn'lik yoklama sayacı seçimi
+        // gerçek odaktaki pencereye geri sıfırlıyor ve ⌥Tab yalnızca iki
+        // pencere arasında gidip geliyordu.
+        guard !isSwitcherSessionActive else { return }
         
         let focusedElement = accessibility.focusedWindow()
         let currentWindows = accessibility.getAllWindows()
@@ -208,6 +214,37 @@ final class StripEngine: ObservableObject {
             accessibility.raiseWindow(focused.id)
         }
         applyLayout()
+    }
+
+    // MARK: - Pencere seçici (⌥Tab)
+
+    private(set) var isSwitcherSessionActive = false
+
+    /// Seçici oturumunu başlatır ve pencere listesinin **tek seferlik anlık
+    /// görüntüsünü** alır (minimize pencereler dahil).
+    func beginSwitcherSession() {
+        guard isEnabled && hasPermission else { return }
+        isSwitcherSessionActive = true
+
+        var list = accessibility.getAllWindows(includeMinimized: true)
+        for index in list.indices {
+            list[index].columnIndex = index
+        }
+        state.windows = list
+
+        // Seçimi, hâlihazırda odaktaki pencereye getir.
+        if let focused = accessibility.focusedWindow(),
+           let index = list.firstIndex(where: { CFEqual($0.id, focused) }) {
+            state.focusedIndex = index
+        } else {
+            state.focusedIndex = list.isEmpty ? 0 : min(state.focusedIndex, list.count - 1)
+        }
+
+        Diagnostics.dumpSwitcherWindows(list)
+    }
+
+    func endSwitcherSession() {
+        isSwitcherSessionActive = false
     }
 
     func selectNextForSwitcher() {

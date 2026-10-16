@@ -23,44 +23,64 @@ final class AccessibilityManager {
     
     // MARK: - Window Discovery
     
-    func getAllWindows() -> [WindowInfo] {
+    /// Çalışan normal (Dock'ta görünen) uygulamaların pencerelerini döndürür.
+    ///
+    /// - Parameter includeMinimized: `true` ise `⌘M` ile simge durumuna
+    ///   küçültülmüş pencereler de listelenir (pencere seçici için gerekli).
+    func getAllWindows(includeMinimized: Bool = false) -> [WindowInfo] {
         var result: [WindowInfo] = []
-        
+
         let runningApps = NSWorkspace.shared.runningApplications.filter {
             $0.activationPolicy == .regular && !$0.isTerminated
         }
-        
+
         for app in runningApps {
             let appElement = AXUIElementCreateApplication(app.processIdentifier)
-            
+
             var windowsRef: CFTypeRef?
             let status = AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsRef)
-            
+
             guard status == .success, let windows = windowsRef as? [AXUIElement] else { continue }
-            
+
             for window in windows {
-                if let info = windowInfo(from: window, pid: app.processIdentifier, appName: app.localizedName ?? "Unknown") {
-                    // Skip minimized and invisible windows
-                    if isWindowVisible(window) && !isMinimized(window) {
-                        result.append(info)
-                    }
-                }
+                let minimized = isMinimized(window)
+
+                // Minimize pencereler yalnızca istenirse listelenir.
+                if minimized && !includeMinimized { continue }
+                if !minimized && !isWindowVisible(window) { continue }
+
+                // Minimize pencerelerin konumu/boyutu güvenilir olmayabilir; onlar
+                // için küçüklük filtresini uygulamıyoruz.
+                guard var info = windowInfo(
+                    from: window,
+                    pid: app.processIdentifier,
+                    appName: app.localizedName ?? "Unknown",
+                    allowSmall: minimized
+                ) else { continue }
+
+                info.isMinimized = minimized
+                result.append(info)
             }
         }
-        
+
         return result
     }
-    
-    private func windowInfo(from element: AXUIElement, pid: pid_t, appName: String) -> WindowInfo? {
+
+    private func windowInfo(
+        from element: AXUIElement,
+        pid: pid_t,
+        appName: String,
+        allowSmall: Bool = false
+    ) -> WindowInfo? {
         var titleRef: CFTypeRef?
         AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &titleRef)
         let title = titleRef as? String ?? ""
-        
-        guard let frame = getFrame(of: element) else { return nil }
-        
-        // Skip very small windows (likely not real content windows)
-        if frame.width < 100 || frame.height < 80 { return nil }
-        
+
+        let frame = getFrame(of: element) ?? .zero
+
+        // Çok küçük pencereler gerçek içerik penceresi değildir.
+        if !allowSmall && (frame.width < 100 || frame.height < 80) { return nil }
+
         return WindowInfo(
             id: element,
             pid: pid,
@@ -118,16 +138,41 @@ final class AccessibilityManager {
         }
     }
     
+    /// Pencereyi öne getirir, odağı ona verir ve minimize ise geri açar.
+    ///
+    /// Sıra önemli: önce uygulama öne gelmeli, yoksa `⌘M` ile küçültülmüş bir
+    /// pencere geri açılmaz.
     func raiseWindow(_ element: AXUIElement) {
-        AXUIElementPerformAction(element, kAXRaiseAction as CFString)
-        
-        // Also activate the application
         var pid: pid_t = 0
-        if AXUIElementGetPid(element, &pid) == .success {
-            if let app = NSRunningApplication(processIdentifier: pid) {
-                app.activate(options: [.activateIgnoringOtherApps])
-            }
+        guard AXUIElementGetPid(element, &pid) == .success else {
+            AXUIElementPerformAction(element, kAXRaiseAction as CFString)
+            return
         }
+
+        // 1) Uygulamayı öne getir.
+        NSRunningApplication(processIdentifier: pid)?
+            .activate(options: [.activateIgnoringOtherApps])
+
+        // 2) Minimize ise geri aç.
+        var minimizedRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXMinimizedAttribute as CFString, &minimizedRef) == .success,
+           (minimizedRef as? Bool) == true {
+            AXUIElementSetAttributeValue(
+                element,
+                kAXMinimizedAttribute as CFString,
+                kCFBooleanFalse
+            )
+        }
+
+        // 3) Pencereyi öne al.
+        AXUIElementPerformAction(element, kAXRaiseAction as CFString)
+
+        // 4) Odağı bu pencereye ver.
+        AXUIElementSetAttributeValue(
+            AXUIElementCreateApplication(pid),
+            kAXFocusedWindowAttribute as CFString,
+            element
+        )
     }
     
     private func isWindowVisible(_ element: AXUIElement) -> Bool {

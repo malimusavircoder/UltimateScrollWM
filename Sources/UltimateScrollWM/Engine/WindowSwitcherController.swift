@@ -3,14 +3,11 @@ import SwiftUI
 
 /// `⌥Tab` pencere seçici.
 ///
-/// macOS'un `⌘Tab` mantığını izler:
-///   1. `⌥Tab` → panel açılır
+/// Windows'taki `Alt+Tab` gibi çalışır:
+///   1. `⌥Tab` → panel açılır (liste **bir kez** alınır, minimize pencereler dahil)
 ///   2. `⌥` basılı tutup `Tab`'a basmaya devam → pencereler arasında gez
-///   3. `⌥` bırakılınca → seçim uygulanır
+///   3. `⌥` bırakılınca → seçim uygulanır (minimize ise geri açılır)
 ///   4. `Esc` → iptal
-///
-/// Önceden son tuştan 0.9 sn sonra kendiliğinden onaylıyordu; bu yüzden panel
-/// "hemen kapanıyor" gibi görünüyordu ve gezmek imkânsızdı.
 @MainActor
 final class WindowSwitcherController {
     private weak var engine: StripEngine?
@@ -35,8 +32,14 @@ final class WindowSwitcherController {
 
     private func show(direction: Int) {
         guard let engine else { return }
-        engine.refreshWindows()
-        guard !engine.state.windows.isEmpty else { return }
+
+        // Liste YALNIZCA oturum başında alınır. Her basışta yeniden alınırsa
+        // seçim gerçek odaktaki pencereye geri sıfırlanır ve gezmek imkânsız olur.
+        if !isActive {
+            engine.beginSwitcherSession()
+            guard !engine.state.windows.isEmpty else { return }
+            beginSessionIfNeeded()
+        }
 
         if direction > 0 {
             engine.selectNextForSwitcher()
@@ -45,7 +48,6 @@ final class WindowSwitcherController {
         }
 
         present(engine: engine)
-        beginSessionIfNeeded()
         scheduleSafety()
     }
 
@@ -102,18 +104,16 @@ final class WindowSwitcherController {
             self.keyMonitor = nil
         }
         panel?.orderOut(nil)
+        engine?.endSwitcherSession()
     }
 
     // MARK: - Panel
 
     private func present(engine: StripEngine) {
-        let visibleCount = min(engine.state.windows.count, 6)
-        let width = CGFloat(visibleCount * 156 + 36)
-        let height: CGFloat = 165
-
         if panel == nil {
+            let hosting = NSHostingView(rootView: WindowSwitcherView(engine: engine))
             let newPanel = NSPanel(
-                contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+                contentRect: NSRect(x: 0, y: 0, width: 420, height: 240),
                 styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered,
                 defer: false
@@ -123,18 +123,27 @@ final class WindowSwitcherController {
             newPanel.isOpaque = false
             newPanel.backgroundColor = .clear
             newPanel.hasShadow = true
+            newPanel.isMovable = false
+            newPanel.contentView = hosting
             panel = newPanel
         }
 
-        panel?.setContentSize(NSSize(width: width, height: height))
-        panel?.contentView = NSHostingView(rootView: WindowSwitcherView(engine: engine))
+        guard let panel, let hosting = panel.contentView else { return }
 
-        if let screen = NSScreen.main, let panel {
+        // İçerik boyutu pencere sayısına göre değişir; kendini ölçmesine izin ver.
+        hosting.layoutSubtreeIfNeeded()
+        var size = hosting.fittingSize
+        if size.width < 1 || size.height < 1 {
+            size = hosting.intrinsicContentSize
+        }
+        panel.setContentSize(size)
+
+        if let screen = NSScreen.main {
             panel.setFrameOrigin(NSPoint(
-                x: screen.visibleFrame.midX - panel.frame.width / 2,
-                y: screen.visibleFrame.midY - panel.frame.height / 2
+                x: screen.visibleFrame.midX - size.width / 2,
+                y: screen.visibleFrame.midY - size.height / 2
             ))
         }
-        panel?.orderFrontRegardless()
+        panel.orderFrontRegardless()
     }
 }
