@@ -135,7 +135,20 @@ UltimateScrollWM/
     └── Resources/ (paneru binary, default-config.toml, lisans)
 ```
 
+## Lisans
+
+- **Bu proje:** MIT — bkz. [`LICENSE`](LICENSE).
+- **Gömülü motor:** [Paneru](https://github.com/karinushka/paneru) 0.5.2, MIT
+  (telif: Karinushka@github). Motor **olduğu gibi, değiştirilmeden** dağıtılır ve
+  lisans metni ikilinin yanında taşınır:
+  kaynakta `Sources/UltimateScrollWM/Resources/PANERU_LICENSE.txt`, dağıtılan
+  pakette `UltimateScrollWM.app/Contents/Resources/…/Resources/PANERU_LICENSE.txt`.
+- Uygulamanın geri kalanı (SwiftUI arayüzü, `⌥Tab` seçici, önizlemeler, ayarlar)
+  bu projeye aittir.
+
+> MIT lisansı, telif ve izin metninin dağıtılan kopyaya dahil edilmesini şart
+> koşar; Paneru'nun metni bu yüzden her DMG'nin içinde bulunur.
+
 ## Notlar
 
-- Gömülü `paneru` binary'si MIT lisanslıdır (bkz. `Sources/UltimateScrollWM/Resources/PANERU_LICENSE.txt`).
 - `XCODE_KURULUM.md` eski, elle Xcode kurulumunu anlatır; artık gerekmiyor (SwiftPM kullanılıyor).

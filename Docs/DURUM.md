@@ -240,6 +240,19 @@ Akışın tamamı `Scripts/package-dmg.sh --notarize` içinde; imzalama bayrakla
 > Doğrulandı: paneru hardened runtime altında sorunsuz çalışıyor (şerit düzeni
 > sağlam), erişilebilirlik izni ve Designated Requirement değişmiyor.
 
+### Lisans
+
+- Bu proje **MIT** (`LICENSE`).
+- Gömülü **paneru** 0.5.2 **MIT** (telif: Karinushka@github), değiştirilmeden
+  dağıtılır. MIT, telif ve izin metninin dağıtılan kopyaya dahil edilmesini şart
+  koştuğu için metin ikilinin yanında taşınır:
+  `Sources/UltimateScrollWM/Resources/PANERU_LICENSE.txt` (SwiftPM
+  `resources: [.copy("Resources")]` sayesinde pakete kendiliğinden girer).
+- Doğrulandı: metin paneru'nun orijinaliyle **birebir** aynı ve hem kurulu
+  pakette hem GitHub'daki DMG'de mevcut.
+- Ticari kullanım kısıtı yok (MIT "sell copies" iznini açıkça verir); uygulama
+  yine de kişisel/ücretsiz kalmak üzere tasarlandı.
+
 ## Önerilen yol haritası
 
 1. ✅ **Ayarlar → `config.toml` köprüsü.** Tamamlandı (bkz. yukarı). Genişletilebilir:
