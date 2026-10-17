@@ -53,11 +53,27 @@ else
 fi
 
 xattr -cr "$BUNDLE"
-# Gömülü motora, çalışan kurulumdaki kimliği ver (mach service adıyla eşleşir).
-codesign --force --sign "$SIGN_ID" -i "$ENGINE_ID" \
-    "$BUNDLE/Contents/Resources/$RES_BUNDLE/Contents/Resources/Resources/paneru"
-codesign --force --sign "$SIGN_ID" "$BUNDLE"
-codesign --verify --verbose=1 "$BUNDLE"
+
+PANERU="$BUNDLE/Contents/Resources/$RES_BUNDLE/Contents/Resources/Resources/paneru"
+RES_BUNDLE_PATH="$BUNDLE/Contents/Resources/$RES_BUNDLE"
+
+# Hardened runtime + güvenli zaman damgası: notarization'ın ön koşulu.
+# Ad-hoc imzada (SIGN_ID="-") ikisi de kullanılmaz — timestamp için gerçek
+# bir Developer ID sertifikası gerekir.
+if [ "$SIGN_ID" = "-" ]; then
+    codesign --force --sign "$SIGN_ID" -i "$ENGINE_ID" "$PANERU"
+    codesign --force --sign "$SIGN_ID" "$RES_BUNDLE_PATH"
+    codesign --force --sign "$SIGN_ID" "$BUNDLE"
+else
+    # İçten dışa imzala: paneru → SwiftPM kaynak paketi → uygulama.
+    # paneru'ya entitlement gerekir (LuaJIT/MAP_JIT), diğerlerine gerekmez.
+    codesign --force --options runtime --timestamp --sign "$SIGN_ID" \
+        -i "$ENGINE_ID" --entitlements AppBundle/paneru.entitlements "$PANERU"
+    codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$RES_BUNDLE_PATH"
+    codesign --force --options runtime --timestamp --sign "$SIGN_ID" "$BUNDLE"
+fi
+
+codesign --verify --deep --strict --verbose=1 "$BUNDLE"
 
 if [ "$TARGET" = "install" ]; then
     DEST="/Applications/$APP.app"

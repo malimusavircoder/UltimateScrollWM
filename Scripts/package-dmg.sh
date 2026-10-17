@@ -5,17 +5,23 @@
 # Kullanım:
 #   Scripts/package-dmg.sh              # -> dist/UltimateScrollWM-<sürüm>.dmg
 #   Scripts/package-dmg.sh cikti        # -> cikti/UltimateScrollWM-<sürüm>.dmg
+#   Scripts/package-dmg.sh --notarize   # Apple'a gönder + damgala (aşağıya bak)
 #
 # İmzalama:
 #   Varsayılan kimlik Makefile üzerinden gelir (CODE_SIGN_IDENTITY).
 #   Doğrudan çalıştırırsan: CODE_SIGN_IDENTITY="Developer ID Application: ..." Scripts/package-dmg.sh
 #
-# Not (notarization):
-#   Bu betik notarization YAPMAZ. Kendi makinelerinde kurmak için gerekmez.
-#   Başkalarına dağıtmak istersen: notarytool submit + staple eklenmeli ve
-#   ikililer --options runtime ile imzalanmalı. DİKKAT: paneru LuaJIT kullanıyor;
-#   hardened runtime açılırsa paneru için com.apple.security.cs.allow-jit
-#   entitlement'ı gerekir. Bu yüzden burada runtime bayrağı kullanılmıyor.
+# Notarization (--notarize):
+#   Developer ID ile imzalanan paketlerde artık **hardened runtime** açıktır
+#   (build-app.sh). paneru LuaJIT kullandığı için AppBundle/paneru.entitlements
+#   ile com.apple.security.cs.allow-jit verilir — yoksa paneru çalışmaz.
+#
+#   Önce kimliği anahtarlığa kaydet (bir kez, şifre güvenli istemde sorulur):
+#     xcrun notarytool store-credentials UltimateScrollWM \
+#       --apple-id "APPLE_ID" --team-id "TEAM_ID"
+#
+#   Sonra:  make notarize         (veya NOTARY_PROFILE=... ile başka profil)
+
 #
 set -euo pipefail
 
@@ -24,7 +30,18 @@ cd "$(dirname "$0")/.."
 APP="UltimateScrollWM"
 INFO="AppBundle/Info.plist"
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO")"
-OUT="${1:-dist}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-UltimateScrollWM}"
+
+# Argümanlar: [--notarize] [çıktı dizini]
+NOTARIZE=0
+OUT="dist"
+for arg in "$@"; do
+    case "$arg" in
+        --notarize) NOTARIZE=1 ;;
+        *) OUT="$arg" ;;
+    esac
+done
+
 DMG="$OUT/$APP-$VERSION.dmg"
 SIGN_ID="${CODE_SIGN_IDENTITY:--}"
 
@@ -69,5 +86,32 @@ if hdiutil verify "$DMG" >/dev/null 2>&1; then
 else
     echo "==> UYARI: DMG doğrulanamadı"
 fi
+
+# 6) Notarization: Apple'a gönder, onayı bekle ve bilet damgala.
+#    Damgalanmış DMG çevrimdışıyken bile Gatekeeper'dan uyarısız geçer.
+if [ "$NOTARIZE" = 1 ]; then
+    if [ "$SIGN_ID" = "-" ]; then
+        echo "==> HATA: notarization için Developer ID kimliği gerekir." >&2
+        exit 1
+    fi
+
+    echo "==> Apple'a gönderiliyor (profil: $NOTARY_PROFILE) — birkaç dakika sürebilir"
+    if ! xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait; then
+        echo "==> HATA: gönderim/onay başarısız. Ayrıntı için: xcrun notarytool log <id> --keychain-profile $NOTARY_PROFILE" >&2
+        exit 1
+    fi
+
+    echo "==> Bilet damgalanıyor"
+    xcrun stapler staple "$DMG"
+    xcrun stapler validate "$DMG"
+
+    # Gatekeeper gerçekten kabul ediyor mu? (asıl kanıt bu)
+    if spctl --assess --type install --verbose=2 "$DMG"; then
+        echo "==> Gatekeeper: kabul edildi (notarized)"
+    else
+        echo "==> UYARI: Gatekeeper hâlâ reddediyor" >&2
+    fi
+fi
+
 echo "==> Hazır: $DMG"
 echo "    Boyut: $(du -h "$DMG" | cut -f1)"

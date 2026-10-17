@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      paneru ikilisi için hardened runtime entitlement'ları.
+
+      Neden gerekli: paneru, LuaJIT 2.1'i statik olarak gömüyor (Cargo.toml'da
+      varsayılan `lua` + `luajit` özellikleri). LuaJIT arm64'te JIT belleğini
+      mmap(MAP_JIT) ile ayırır; hardened runtime bu bayrağı engeller ve LuaJIT
+      çalışma zamanı hatası verir. Bu iki entitlement notarization tarafından
+      kabul edilir (Apple'ın izin verdiği JIT entitlement'larıdır).
+    -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- LuaJIT bazı yollarda RWX bellek ister; yedek yol için. -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+</dict>
+</plist>
