@@ -40,8 +40,14 @@ final class WindowSwitcherController {
         // Liste YALNIZCA oturum başında alınır. Her basışta yeniden alınırsa
         // seçim gerçek odaktaki pencereye geri sıfırlanır ve gezmek imkânsız olur.
         if !isActive {
-            engine.beginSwitcherSession()
-            guard !engine.state.windows.isEmpty else { return }
+            // Pencere listesi boşsa (ekran kilitli, uyku sonrası ilk saniyeler…)
+            // oturum AÇILMAZ: bayrak açık kalırsa pencere listesi uygulama
+            // yeniden başlatılana kadar donar. Ayrıca yarım kalmış bir panel
+            // varsa burada temizlenir.
+            guard engine.beginSwitcherSession() else {
+                endSession()
+                return
+            }
             beginSessionIfNeeded()
         }
 
@@ -186,6 +192,13 @@ final class WindowSwitcherController {
         var size = hosting.fittingSize
         if size.width < 1 || size.height < 1 {
             size = hosting.intrinsicContentSize
+        }
+        // Emniyet: panel hiçbir zaman ekrandan büyük olmasın. İçerik ölçümü
+        // beklenmedik bir değer döndürürse (boş liste, düzen hatası) ekranı
+        // kaplayan boş bir panel kalmasın.
+        if let screen = NSScreen.main {
+            size.width = min(size.width, screen.visibleFrame.width - 40)
+            size.height = min(size.height, screen.visibleFrame.height - 40)
         }
         panel.setContentSize(size)
 

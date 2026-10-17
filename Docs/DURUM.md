@@ -138,6 +138,17 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
     - `make notarize` (gönder + bekle + damgala + `spctl` ile doğrula).
     - Erişilebilirlik izni ve *Designated Requirement* değişmedi: izin
       güncellemede korunuyor.
+18. **Boş liste ile `⌥Tab` hatası (0.7.1)**: `beginSwitcherSession()` oturum
+    bayrağını pencere listesini almadan **önce** açıyordu. Liste boş döndüğünde
+    (ekran kilitli, uyku sonrası ilk saniyeler) seçici erken dönüyor, bayrak ise
+    açık kalıyordu. `refreshWindows()` bu bayrak açıkken çalışmadığı için pencere
+    listesi **uygulama yeniden başlatılana kadar** donuyordu; ekranda da boş bir
+    panel kalabiliyordu.
+    - Düzeltme: bayrak yalnızca liste **doluysa** açılıyor; `beginSwitcherSession()`
+      `Bool` döndürüyor ve çağıran temizlik yapıyor (`endSession()`).
+    - Ek emniyet: panel boyutu ekran alanıyla sınırlandı — içerik ölçümü
+      beklenmedik bir değer döndürürse ekranı kaplayan boş panel oluşamaz.
+    - Teşhis: boş liste durumu da `secici.txt`'e `pencereSayisi: 0` olarak yazılır.
 
 ## Tespit edilen sorunlar
 

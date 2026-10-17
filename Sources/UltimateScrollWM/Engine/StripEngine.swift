@@ -228,11 +228,31 @@ final class StripEngine: ObservableObject {
 
     /// Seçici oturumunu başlatır ve pencere listesinin **tek seferlik anlık
     /// görüntüsünü** alır (minimize pencereler dahil).
-    func beginSwitcherSession() {
-        guard isEnabled && hasPermission else { return }
-        isSwitcherSessionActive = true
+    ///
+    /// - Returns: Oturum gerçekten açıldıysa `true`. Liste boşsa `false` döner ve
+    ///   oturum bayrağı **açılmaz**.
+    ///
+    /// Neden bayrak sonradan açılıyor: `refreshWindows()` oturum sırasında
+    /// çalışmayı reddeder (`guard !isSwitcherSessionActive`). Bayrak, liste boş
+    /// olduğu için panel açılmadan kalırsa hiçbir zaman kapanmaz ve pencere
+    /// listesi uygulama yeniden başlatılana kadar donar. Ekran kilitliyken veya
+    /// uyku sonrası ilk saniyelerde AX listesi boş dönebildiği için bu gerçekten
+    /// oluyordu.
+    @discardableResult
+    func beginSwitcherSession() -> Bool {
+        guard isEnabled && hasPermission else { return false }
 
         var list = accessibility.getAllWindows(includeMinimized: true)
+
+        // Boş liste: panel açmanın anlamı yok, oturum da açılmaz.
+        // Yine de teşhis kaydı bırak (neden boş olduğunu sonra görebilelim).
+        guard !list.isEmpty else {
+            Diagnostics.dumpSwitcherWindows(list)
+            return false
+        }
+
+        isSwitcherSessionActive = true
+
         for index in list.indices {
             list[index].columnIndex = index
         }
@@ -243,10 +263,11 @@ final class StripEngine: ObservableObject {
            let index = list.firstIndex(where: { CFEqual($0.id, focused) }) {
             state.focusedIndex = index
         } else {
-            state.focusedIndex = list.isEmpty ? 0 : min(state.focusedIndex, list.count - 1)
+            state.focusedIndex = min(state.focusedIndex, list.count - 1)
         }
 
         Diagnostics.dumpSwitcherWindows(list)
+        return true
     }
 
     func endSwitcherSession() {
