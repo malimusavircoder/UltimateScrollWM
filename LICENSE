@@ -19,10 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Bu yazılım, gömülü olarak Paneru motorunu içerir (MIT, Copyright (c) 2025
-Karinushka@github). Üçüncü taraf bileşenlerin tam lisans metinleri
-`ThirdParty/` klasöründe ve dağıtılan uygulama paketinin içinde
-(`Contents/Resources/Licenses/`) yer alır.
