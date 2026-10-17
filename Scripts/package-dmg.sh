@@ -22,7 +22,6 @@
 #
 #   Sonra:  make notarize         (veya NOTARY_PROFILE=... ile başka profil)
 
-#
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -55,7 +54,38 @@ trap 'rm -rf "$TMP"' EXIT
 #     dizinde yapılmalı, o yüzden build-app.sh'a geçici hedef veriyoruz.)
 Scripts/build-app.sh "$TMP/app"
 
+# 1b) Notarization isteniyorsa ÖNCE uygulamayı notarize edip damgala.
+#     DMG'yi damgalamak DMG'nin açılmasını sağlar; ama DMG'den çıkarılan
+#     uygulamanın kendi bileti de olmalı. Yoksa çevrimdışı bir Mac'te ilk
+#     açılışta Gatekeeper çevrimiçi doğrulama yapamaz ve uyarı çıkar.
+if [ "$NOTARIZE" = 1 ]; then
+    if [ "$SIGN_ID" = "-" ]; then
+        echo "==> HATA: notarization için Developer ID kimliği gerekir." >&2
+        exit 1
+    fi
+
+    echo "==> Uygulama Apple'a gönderiliyor (1/2): $APP $VERSION"
+    APPZIP="$TMP/$APP.zip"
+    ditto -c -k --keepParent "$TMP/app/$APP.app" "$APPZIP"
+
+    ALOG="$TMP/notarytool-app.log"
+    if ! xcrun notarytool submit "$APPZIP" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee "$ALOG"; then
+        AID="$(grep -m1 '^ *id: ' "$ALOG" | awk '{print $2}')"
+        echo "==> HATA: uygulamanın notarization'ı başarısız." >&2
+        [ -n "$AID" ] && echo "    Ayrıntılı gerekçe: xcrun notarytool log $AID --keychain-profile $NOTARY_PROFILE" >&2
+        exit 1
+    fi
+    if ! grep -q "status: Accepted" "$ALOG"; then
+        echo "==> HATA: Apple uygulamayı kabul etmedi." >&2
+        exit 1
+    fi
+
+    xcrun stapler staple "$TMP/app/$APP.app"
+    xcrun stapler validate "$TMP/app/$APP.app"
+fi
+
 # 2) DMG içeriği: uygulama + Applications kısayolu (sürükle-bırak için).
+#    (Uygulama artık damgalı: kopya da bileti taşır.)
 STAGE="$TMP/dmg"
 mkdir -p "$STAGE"
 ditto "$TMP/app/$APP.app" "$STAGE/$APP.app"
@@ -87,17 +117,21 @@ else
     echo "==> UYARI: DMG doğrulanamadı"
 fi
 
-# 6) Notarization: Apple'a gönder, onayı bekle ve bilet damgala.
-#    Damgalanmış DMG çevrimdışıyken bile Gatekeeper'dan uyarısız geçer.
+# 6) DMG'nin kendi biletini de damgala (2/2).
+#    Adım 1b uygulamayı damgaladı; bu adım DMG'nin çevrimdışı açılmasını sağlar.
 if [ "$NOTARIZE" = 1 ]; then
-    if [ "$SIGN_ID" = "-" ]; then
-        echo "==> HATA: notarization için Developer ID kimliği gerekir." >&2
+    echo "==> DMG Apple'a gönderiliyor (2/2): $(basename "$DMG")"
+    NLOG="$TMP/notarytool.log"
+    # pipefail açık: notarytool başarısız olursa pipeline de başarısız olur.
+    if ! xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | tee "$NLOG"; then
+        NID="$(grep -m1 '^ *id: ' "$NLOG" | awk '{print $2}')"
+        echo "==> HATA: gönderim/onay başarısız." >&2
+        [ -n "$NID" ] && echo "    Ayrıntılı gerekçe: xcrun notarytool log $NID --keychain-profile $NOTARY_PROFILE" >&2
         exit 1
     fi
-
-    echo "==> Apple'a gönderiliyor (profil: $NOTARY_PROFILE) — birkaç dakika sürebilir"
-    if ! xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait; then
-        echo "==> HATA: gönderim/onay başarısız. Ayrıntı için: xcrun notarytool log <id> --keychain-profile $NOTARY_PROFILE" >&2
+    # Bazı sürümler "Invalid" durumunda da 0 dönebiliyor; durumu ayrıca doğrula.
+    if ! grep -q "status: Accepted" "$NLOG"; then
+        echo "==> HATA: Apple paketi kabul etmedi (durum 'Accepted' değil)." >&2
         exit 1
     fi
 

@@ -14,18 +14,26 @@ Arka planda [paneru](https://github.com/karinushka/paneru) motorunu çalıştır
 
 ## Kurulum
 
-1. `UltimateScrollWM-0.6.0.dmg` dosyasını aç (çift tıkla).
+1. `UltimateScrollWM-0.7.0.dmg` dosyasını aç (çift tıkla).
 2. Açılan pencerede **UltimateScrollWM**'i **Applications** kısayoluna sürükle.
 3. Diski çıkar (Finder'da yanındaki ⏏).
 4. **Uygulamalar** klasöründen UltimateScrollWM'i çalıştır.
 
 ## İlk açılışta Gatekeeper uyarısı
 
-Bu paket **notarize edilmemiştir** (kişisel kullanım için üretildi). Uygulama
-Developer ID ile imzalıdır, yani kimliği doğrulanabilir — ama Apple'ın
-doğrulama sunucusundan geçmediği için ilk açılışta uyarı çıkar.
+Bu paket **notarize edilmiştir** — Apple doğrulama sunucusundan geçmiş ve bilet
+DMG'ye damgalanmıştır. Bu yüzden indirip açtığında **uyarı çıkmaz**; çift tıklayıp
+doğrudan kurabilirsin.
 
-Şu yollardan biriyle geç:
+Doğrulamak istersen:
+
+```bash
+spctl --assess --type install --verbose=2 ~/Downloads/UltimateScrollWM-0.7.0.dmg
+# ==> kabul edilmeli: source=Notarized Developer ID
+```
+
+**Uyarı yine de çıkarsa** (eski bir sürümü indirdiysen, DMG bozulduysa veya
+kendin derlediysen) şu yollardan biriyle geç:
 
 **A) Sistem Ayarları'ndan**
 1. Uyarıyı kapat.
@@ -41,7 +49,8 @@ Uygulamaya **sağ tıkla ▸ Aç** → çıkan uyarıda tekrar **Aç**.
 xattr -dr com.apple.quarantine /Applications/UltimateScrollWM.app
 ```
 
-> Yalnızca kendi makinene kopyalarken hiç uyarı çıkmayabilir; uyarı genelde
+> Kendi derlemeni kuruyorsan hiç uyarı çıkmaz: `make install` imzalı paketi
+> doğrudan `/Applications` içine koyar, karantina etiketi oluşmaz. Uyarı yalnızca
 > AirDrop/indirme ile gelen dosyalarda (quarantine etiketi) görülür.
 
 ## İzin verme — en önemli adım

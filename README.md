@@ -8,14 +8,13 @@ Pencereler yan yana bir şeritte durur. Yeni bir pencere açıldığında diğer
 
 ## İndirme
 
-Hazır paket (Developer ID ile imzalı DMG, yalnızca Apple Silicon):
+Hazır paket (Developer ID ile imzalı ve **notarize edilmiş** DMG, yalnızca Apple Silicon):
 
 **[Son sürümü indir](https://github.com/malimusavircoder/UltimateScrollWM/releases/latest)**
 
-DMG'yi açıp `UltimateScrollWM.app`'i `Applications` klasörüne sürükle. İlk açılışta
-Gatekeeper uyarısı çıkar (paket notarize edilmemiştir) — çözümü
-[`Docs/KURULUM.md`](Docs/KURULUM.md) içinde. Sonra **Aygıt Denetimi ve Veri
-Erişimi** iznini ver.
+DMG'yi açıp `UltimateScrollWM.app`'i `Applications` klasörüne sürükle. Apple
+doğrulamasından geçtiği için **Gatekeeper uyarısı çıkmaz**. Sonra **Aygıt Denetimi
+ve Veri Erişimi** iznini ver.
 
 ## Kaynaktan derleme
 
@@ -110,11 +109,10 @@ güncelleme, kaldırma): **[`Docs/KURULUM.md`](Docs/KURULUM.md)**.
 
 - Paket yalnızca **`arm64`** (Apple Silicon). Intel Mac'lerde çalışmaz;
   evrensel derleme adımları `Docs/DURUM.md`'de (Not 1).
-- DMG **notarize edilmemiştir** (kişisel kullanım). Başka bir Mac'te ilk
-  açılışta Gatekeeper uyarısı çıkar — çözümü `Docs/KURULUM.md`'de.
-- Notarization'a geçilecekse paneru **LuaJIT** kullandığı için
-  `com.apple.security.cs.allow-jit` entitlement'ı gerekir; ayrıntı
-  `Docs/DURUM.md` (Not 2) ve `Scripts/package-dmg.sh` başlığında.
+- Notarization tamamlandı: DMG imzalı **ve** damgalı, Gatekeeper uyarısı çıkmaz.
+  Yeniden üretmek için `make notarize` (paneru LuaJIT kullandığı için hardened
+  runtime altında `com.apple.security.cs.allow-jit` entitlement'ı gerekir;
+  ayrıntı `Docs/DURUM.md` Not 2).
 
 ## Proje Yapısı
 

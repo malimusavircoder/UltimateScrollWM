@@ -131,6 +131,13 @@ Paneru yapılandırması: `~/Library/Application Support/UltimateScrollWM/config
       **yerel** izleyici de eklendi (yoksa oturum takılı kalırdı).
     - Yerel tuş izleyicisi `Esc`'i **tüketir**: panel anahtar pencereyken Esc
       arkadaki uygulamaya gitmez.
+17. **Notarization**: Uygulama ve gömülü `paneru` artık **hardened runtime** ile
+    imzalanıyor; DMG Apple'a gönderilip bileti damgalanıyor. Başka bir Mac'te
+    Gatekeeper uyarısı çıkmaz. paneru LuaJIT kullandığı için
+    `AppBundle/paneru.entitlements` ile JIT entitlement'ları verilir.
+    - `make notarize` (gönder + bekle + damgala + `spctl` ile doğrula).
+    - Erişilebilirlik izni ve *Designated Requirement* değişmedi: izin
+      güncellemede korunuyor.
 
 ## Tespit edilen sorunlar
 
@@ -186,8 +193,9 @@ sertifikaya bağlar ve izin yeniden derlemelerde korunur.
 
 ## Dağıtım (DMG) ve bilinen kısıtlar
 
-`make dmg` → `dist/UltimateScrollWM-<sürüm>.dmg`. Uygulama ve gömülü `paneru`
-Developer ID ile imzalanır, DMG'nin kendisi de imzalanır ve doğrulanır.
+`make dmg` → `dist/UltimateScrollWM-<sürüm>.dmg`; `make notarize` aynısını üretip
+Apple'a gönderir ve bileti damgalar. Uygulama ve gömülü `paneru` Developer ID ile
+**hardened runtime** altında imzalanır, DMG'nin kendisi de imzalanır ve doğrulanır.
 DMG'deki uygulamanın *Designated Requirement*'ı kurulu sürümle birebir aynı
 olduğu için **Erişilebilirlik izni güncellemede korunur**.
 Son kullanıcı kılavuzu: `Docs/KURULUM.md`.
@@ -206,25 +214,31 @@ paket gerekirse:
 4. Uygulamayı evrensel derle: `swift build -c release --arch arm64 --arch x86_64`
 5. `Scripts/build-app.sh` kopyalama adımı evrensel ikiliyle olduğu gibi çalışır.
 
-### Not 2 — Notarization (başkalarına dağıtım için)
+### Not 2 — Notarization (tamamlandı)
 
-Şu an **notarize edilmiyor** (kişisel kullanım); bu yüzden başka bir Mac'te ilk
-açılışta Gatekeeper uyarısı çıkar (çözümü `Docs/KURULUM.md`'de). Dağıtmak
-istenirse:
+Uygulama ve gömülü `paneru` **hardened runtime** ile imzalanır
+(`--options runtime --timestamp`), DMG Apple'a gönderilir ve bilet damgalanır.
+Sonuç: başka bir Mac'te indirilip açıldığında **Gatekeeper uyarısı çıkmaz**.
 
-1. Kimlik bilgisi kaydet (Apple Developer hesabı gerekir):
-   `xcrun notarytool store-credentials`
-   (uygulamaya özel parola **veya** App Store Connect API anahtarı)
-2. İkileri hardened runtime ile imzala: `codesign --options runtime --timestamp`
-3. Gönder: `xcrun notarytool submit <dosya> --keychain-profile <ad> --wait`
-4. Bileti iliştir: `xcrun stapler staple <dosya>`
+```bash
+# bir kez: kimliği anahtarlığa kaydet (şifre güvenli istemde sorulur)
+xcrun notarytool store-credentials UltimateScrollWM \
+  --apple-id "APPLE_ID" --team-id Z54BS9LRA2
 
-> ⚠️ **Tuzak:** paneru **LuaJIT** ile derlenmiştir; Lua betiği kullanıldığında
-> JIT çalışması gerekir ve hardened runtime bunu engeller. Bu yüzden paneru'ya
-> `com.apple.security.cs.allow-jit` (gerekirse ayrıca
-> `com.apple.security.cs.allow-unsigned-executable-memory`) entitlement'ı
-> verilmelidir. Şimdilik `Scripts/package-dmg.sh` runtime bayrağını
-> kullanmıyor — notarization'a geçilirse önce bu entitlement eklenmeli.
+make notarize     # gönder + bekle + damgala + Gatekeeper ile doğrula
+```
+
+Akışın tamamı `Scripts/package-dmg.sh --notarize` içinde; imzalama bayrakları
+`Scripts/build-app.sh`.
+
+> ⚠️ **Tuzak:** paneru **LuaJIT** ile derlenmiştir ve LuaJIT arm64'te JIT belleğini
+> `mmap(MAP_JIT)` ile ayırır — hardened runtime bunu engeller. Bu yüzden paneru'ya
+> `AppBundle/paneru.entitlements` ile `com.apple.security.cs.allow-jit` ve
+> `com.apple.security.cs.allow-unsigned-executable-memory` verilir. İkisi de
+> Apple'ın notarization için kabul ettiği entitlement'lardır.
+>
+> Doğrulandı: paneru hardened runtime altında sorunsuz çalışıyor (şerit düzeni
+> sağlam), erişilebilirlik izni ve Designated Requirement değişmiyor.
 
 ## Önerilen yol haritası
 
