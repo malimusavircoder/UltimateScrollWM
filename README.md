@@ -6,7 +6,18 @@ SwiftUI arayüzü, altında [Paneru](https://github.com/karinushka/paneru) motor
 Pencereler yan yana bir şeritte durur. Yeni bir pencere açıldığında diğerleri
 **küçülmez**; sıradaki boşluğa girer ve şerit, odaktaki pencereyi göstermek için kayar.
 
-## Hızlı Başlangıç
+## İndirme
+
+Hazır paket (Developer ID ile imzalı DMG, yalnızca Apple Silicon):
+
+**[Son sürümü indir](https://github.com/malimusavircoder/UltimateScrollWM/releases/latest)**
+
+DMG'yi açıp `UltimateScrollWM.app`'i `Applications` klasörüne sürükle. İlk açılışta
+Gatekeeper uyarısı çıkar (paket notarize edilmemiştir) — çözümü
+[`Docs/KURULUM.md`](Docs/KURULUM.md) içinde. Sonra **Aygıt Denetimi ve Veri
+Erişimi** iznini ver.
+
+## Kaynaktan derleme
 
 ```bash
 make install
@@ -41,6 +52,9 @@ make clean    # derleme çıktılarını temizler
 - Ayarlar penceresi: Genel Bakış / Pencere Düzeni / Kısayollar / Gelişmiş
 - `⌥Tab` / `⌥⇧Tab` ile Alt-Tab benzeri pencere değiştirici (`⌥` basılı tut,
   `Tab` ile gez, `⌥` bırakınca seç; `Esc` iptal)
+- Seçicide **gerçek pencere önizlemeleri** (ScreenCaptureKit; Ekran Kaydı izni
+  gerektirir, izin yoksa uygulama simgesine düşer)
+- Seçicide hücre başına `✕` ile pencere kapatma
 - Erişilebilirlik izni yönlendirmesi
 - Mac açılışında başlatma (login item)
 - Motoru yeniden başlatma, yapılandırma dosyasını açma
@@ -71,6 +85,7 @@ UltimateScrollWMApp (SwiftUI)
 ├── PaneruService        → gömülü paneru'yu başlatır, send-cmd ile komut gönderir
 ├── HotKeyManager        → ⌥Tab kısayolları (pencere değiştirici)
 ├── WindowSwitcherController → ⌥Tab panelini yönetir
+├── WindowThumbnailProvider  → seçici için pencere görüntüleri (ScreenCaptureKit)
 ├── AccessibilityManager → pencere keşfi / AX izni
 └── StripEngine          → native Swift motor (şu an PASİF, managesLayout = false)
 ```
@@ -115,7 +130,7 @@ UltimateScrollWM/
 └── Sources/UltimateScrollWM/
     ├── App/UltimateScrollWMApp.swift
     ├── Engine/  (PaneruService, StripEngine, AccessibilityManager, HotKeyManager,
-    │             WindowSwitcherController, LoginItemManager)
+    │             WindowSwitcherController, WindowThumbnailProvider, LoginItemManager)
     ├── Models/  (StripState, WindowInfo)
     ├── Views/   (MenuBarView, SettingsView, WindowSwitcherView)
     ├── Utilities/Extensions.swift

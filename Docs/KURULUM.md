@@ -14,7 +14,7 @@ Arka planda [paneru](https://github.com/karinushka/paneru) motorunu çalıştır
 
 ## Kurulum
 
-1. `UltimateScrollWM-0.5.0.dmg` dosyasını aç (çift tıkla).
+1. `UltimateScrollWM-0.6.0.dmg` dosyasını aç (çift tıkla).
 2. Açılan pencerede **UltimateScrollWM**'i **Applications** kısayoluna sürükle.
 3. Diski çıkar (Finder'da yanındaki ⏏).
 4. **Uygulamalar** klasöründen UltimateScrollWM'i çalıştır.
